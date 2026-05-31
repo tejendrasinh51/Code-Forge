@@ -1,0 +1,43 @@
+import { createJiti } from "jiti";
+
+const jiti = createJiti(import.meta.url);
+
+// Import env files to validate at build time. Use jiti so we can load .ts files in here.
+await jiti.import("./src/env");
+
+/** @type {import("next").NextConfig} */
+const config = {
+  /** Required for Docker production builds */
+  output: "standalone",
+
+  /** Enables hot reloading for local packages without a build step */
+  transpilePackages: [
+    "@acme/api",
+    "@acme/auth",
+    "@acme/db",
+    "@acme/jobs",
+    "@acme/ui",
+    "@acme/validators",
+  ],
+
+  /** We already do linting and typechecking as separate tasks in CI */
+  typescript: { ignoreBuildErrors: true },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.codeforge.xyz",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+export default config;
