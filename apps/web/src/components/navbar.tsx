@@ -22,7 +22,7 @@ import { AnimatedThemeToggler } from "./ui/animated-theme-toggler";
 
 const navLinks = [
   { href: "/problems", label: "Problems" },
-  { href: "/ducklets", label: "Codelets" },
+  { href: "/codelets", label: "Codelets" },
   { href: "/system-design", label: "System Design" },
 ];
 
@@ -100,27 +100,24 @@ export function Navbar() {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {user.username && (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={`/u/${user.username}`}
-                        className="w-full cursor-pointer"
-                      >
-                        My Profile
-                      </Link>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => router.push(`/u/${user.username}`)}
+                    >
+                      My Profile
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="w-full cursor-pointer">
-                      Dashboard
-                    </Link>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => router.push("/dashboard")}
+                  >
+                    Dashboard
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/dashboard/settings"
-                      className="w-full cursor-pointer"
-                    >
-                      Settings
-                    </Link>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => router.push("/dashboard/settings")}
+                  >
+                    Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

@@ -7,15 +7,15 @@
 // only, not per-request traffic.
 
 export type TelemetryEvent =
-  | "ducklet.created"
-  | "ducklet.forked"
-  | "ducklet.deleted"
-  | "ducklet.snapshot.created"
-  | "ducklet.snapshot.restored"
-  | "ducklet.member.invited"
-  | "ducklet.member.removed"
-  | "ducklet.member.role_changed"
-  | "ducklet.access.requested";
+  | "codelet.created"
+  | "codelet.forked"
+  | "codelet.deleted"
+  | "codelet.snapshot.created"
+  | "codelet.snapshot.restored"
+  | "codelet.member.invited"
+  | "codelet.member.removed"
+  | "codelet.member.role_changed"
+  | "codelet.access.requested";
 
 export function track(
   event: TelemetryEvent,

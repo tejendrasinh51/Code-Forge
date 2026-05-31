@@ -10,9 +10,9 @@ export { eq, desc, asc, and, or } from "drizzle-orm";
 
 // export * from "./schema";
 export {
-  ducklet,
-  duckletMember,
-  duckletMessage,
+  codelet,
+  codeletMember,
+  codeletMessage,
   account,
   user,
   userProfile,

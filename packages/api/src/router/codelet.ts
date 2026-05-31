@@ -5,10 +5,10 @@ import { z } from "zod";
 import type { CollabRole } from "@acme/auth/collab-token";
 import { signCollabToken } from "@acme/auth/collab-token";
 import {
-  ducklet,
-  duckletMember,
-  duckletMessage,
-  duckletSnapshot,
+  codelet,
+  codeletMember,
+  codeletMessage,
+  codeletSnapshot,
   userProfile,
 } from "@acme/db/schema";
 import { getPublicUrl } from "@acme/storage";
@@ -39,9 +39,9 @@ function checkRequestAccessRate(userId: string): boolean {
   return true;
 }
 
-export const duckletRouter = createTRPCRouter({
+export const codeletRouter = createTRPCRouter({
   /**
-   * List ducklets (public + user's private ducklets)
+   * List codelets (public + user's private codelets)
    */
   list: publicProcedure
     .input(
@@ -65,55 +65,55 @@ export const duckletRouter = createTRPCRouter({
       const conditions = [];
 
       if (ctx.session?.user && onlyMine) {
-        conditions.push(eq(ducklet.ownerId, ctx.session.user.id));
+        conditions.push(eq(codelet.ownerId, ctx.session.user.id));
       } else if (ctx.session?.user) {
         conditions.push(
           or(
-            eq(ducklet.isPublic, true),
-            eq(ducklet.ownerId, ctx.session.user.id),
+            eq(codelet.isPublic, true),
+            eq(codelet.ownerId, ctx.session.user.id),
           ),
         );
       } else {
-        conditions.push(eq(ducklet.isPublic, true));
+        conditions.push(eq(codelet.isPublic, true));
       }
 
       if (search) {
         // Postgres ILIKE handles case-insensitive prefix/substring match.
         // % chars in the input are escaped so users can't widen the search.
         const escaped = search.replace(/[\\%_]/g, (m) => `\\${m}`);
-        conditions.push(ilike(ducklet.name, `%${escaped}%`));
+        conditions.push(ilike(codelet.name, `%${escaped}%`));
       }
 
       const orderBy =
         sort === "oldest"
-          ? ducklet.createdAt
+          ? codelet.createdAt
           : sort === "updated"
-            ? desc(ducklet.updatedAt)
-            : desc(ducklet.createdAt);
+            ? desc(codelet.updatedAt)
+            : desc(codelet.createdAt);
 
-      const ducklets = await ctx.db
+      const codelets = await ctx.db
         .select({
-          id: ducklet.id,
-          name: ducklet.name,
-          description: ducklet.description,
-          isPublic: ducklet.isPublic,
-          previewImage: ducklet.previewImage,
-          createdAt: ducklet.createdAt,
-          updatedAt: ducklet.updatedAt,
-          ownerId: ducklet.ownerId,
+          id: codelet.id,
+          name: codelet.name,
+          description: codelet.description,
+          isPublic: codelet.isPublic,
+          previewImage: codelet.previewImage,
+          createdAt: codelet.createdAt,
+          updatedAt: codelet.updatedAt,
+          ownerId: codelet.ownerId,
           owner: {
             username: userProfile.username,
             photoURL: userProfile.photoURL,
           },
         })
-        .from(ducklet)
-        .leftJoin(userProfile, eq(ducklet.ownerId, userProfile.userId))
+        .from(codelet)
+        .leftJoin(userProfile, eq(codelet.ownerId, userProfile.userId))
         .where(and(...conditions))
         .orderBy(orderBy)
         .limit(limit)
         .offset(offset);
 
-      const items = ducklets.map((d) => ({
+      const items = codelets.map((d) => ({
         ...d,
         previewImage: d.previewImage ? getPublicUrl(d.previewImage) : null,
       }));
@@ -125,25 +125,25 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Get ducklet by ID
+   * Get codelet by ID
    */
   byId: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       const [result] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.id))
+        .from(codelet)
+        .where(eq(codelet.id, input.id))
         .limit(1);
 
       if (!result) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Ducklet not found",
+          message: "codelet not found",
         });
       }
 
-      // Short-circuit: private ducklet with no session user can't read at all.
+      // Short-circuit: private codelet with no session user can't read at all.
       if (!result.isPublic && !ctx.session?.user) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
       }
@@ -155,15 +155,15 @@ export const duckletRouter = createTRPCRouter({
       const [members, ownerRows] = await Promise.all([
         ctx.db
           .select({
-            userId: duckletMember.userId,
-            role: duckletMember.role,
-            status: duckletMember.status,
+            userId: codeletMember.userId,
+            role: codeletMember.role,
+            status: codeletMember.status,
             username: userProfile.username,
             photoURL: userProfile.photoURL,
           })
-          .from(duckletMember)
-          .leftJoin(userProfile, eq(duckletMember.userId, userProfile.userId))
-          .where(eq(duckletMember.duckletId, input.id)),
+          .from(codeletMember)
+          .leftJoin(userProfile, eq(codeletMember.userId, userProfile.userId))
+          .where(eq(codeletMember.codeletId, input.id)),
         ctx.db
           .select({
             username: userProfile.username,
@@ -183,7 +183,7 @@ export const duckletRouter = createTRPCRouter({
         }
       }
 
-      // Re-check access now that we have the members list. Private ducklets
+      // Re-check access now that we have the members list. Private codelets
       // require ownership or an ACTIVE membership.
       if (
         !result.isPublic &&
@@ -212,18 +212,18 @@ export const duckletRouter = createTRPCRouter({
    * public-read access before signing.
    */
   getCollabToken: protectedProcedure
-    .input(z.object({ duckletId: z.number() }))
+    .input(z.object({ codeletId: z.number() }))
     .query(async ({ ctx, input }) => {
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Ducklet not found",
+          message: "codelet not found",
         });
       }
 
@@ -235,12 +235,12 @@ export const duckletRouter = createTRPCRouter({
       } else {
         const [member] = await ctx.db
           .select()
-          .from(duckletMember)
+          .from(codeletMember)
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, userId),
-              eq(duckletMember.status, "active"),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, userId),
+              eq(codeletMember.status, "active"),
             ),
           )
           .limit(1);
@@ -267,7 +267,7 @@ export const duckletRouter = createTRPCRouter({
         {
           userId,
           username,
-          duckletId: input.duckletId,
+          codeletId: input.codeletId,
           role,
           exp: Math.floor(Date.now() / 1000) + COLLAB_TOKEN_TTL_SECONDS,
         },
@@ -278,7 +278,7 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Create a new ducklet
+   * Create a new codelet
    */
   create: protectedProcedure
     .input(
@@ -292,28 +292,28 @@ export const duckletRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const [newDucklet] = await ctx.db
-        .insert(ducklet)
+      const [newcodelet] = await ctx.db
+        .insert(codelet)
         .values({
           ...input,
           ownerId: ctx.session.user.id,
         })
         .returning();
 
-      if (newDucklet) {
-        track("ducklet.created", {
-          duckletId: newDucklet.id,
+      if (newcodelet) {
+        track("codelet.created", {
+          codeletId: newcodelet.id,
           userId: ctx.session.user.id,
-          isPublic: newDucklet.isPublic,
+          isPublic: newcodelet.isPublic,
         });
       }
 
-      return newDucklet;
+      return newcodelet;
     }),
 
   /**
-   * Fork an existing ducklet — copies its current yjsData snapshot
-   * into a new private ducklet owned by the caller.
+   * Fork an existing codelet — copies its current yjsData snapshot
+   * into a new private codelet owned by the caller.
    */
   fork: protectedProcedure
     .input(
@@ -325,14 +325,14 @@ export const duckletRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [source] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.id))
+        .from(codelet)
+        .where(eq(codelet.id, input.id))
         .limit(1);
 
       if (!source) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Ducklet not found",
+          message: "codelet not found",
         });
       }
 
@@ -341,12 +341,12 @@ export const duckletRouter = createTRPCRouter({
       if (!source.isPublic && source.ownerId !== userId) {
         const [member] = await ctx.db
           .select()
-          .from(duckletMember)
+          .from(codeletMember)
           .where(
             and(
-              eq(duckletMember.duckletId, input.id),
-              eq(duckletMember.userId, userId),
-              eq(duckletMember.status, "active"),
+              eq(codeletMember.codeletId, input.id),
+              eq(codeletMember.userId, userId),
+              eq(codeletMember.status, "active"),
             ),
           )
           .limit(1);
@@ -359,7 +359,7 @@ export const duckletRouter = createTRPCRouter({
       const forkedName = (input.name ?? `${source.name} (fork)`).slice(0, 100);
 
       const [forked] = await ctx.db
-        .insert(ducklet)
+        .insert(codelet)
         .values({
           name: forkedName,
           description: source.description,
@@ -370,9 +370,9 @@ export const duckletRouter = createTRPCRouter({
         .returning();
 
       if (forked) {
-        track("ducklet.forked", {
-          duckletId: forked.id,
-          sourceDuckletId: source.id,
+        track("codelet.forked", {
+          codeletId: forked.id,
+          sourcecodeletId: source.id,
           userId,
         });
       }
@@ -381,7 +381,7 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Update ducklet settings
+   * Update codelet settings
    */
   update: protectedProcedure
     .input(
@@ -398,8 +398,8 @@ export const duckletRouter = createTRPCRouter({
       // Check ownership
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, id))
+        .from(codelet)
+        .where(eq(codelet.id, id))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -407,16 +407,16 @@ export const duckletRouter = createTRPCRouter({
       }
 
       const [updated] = await ctx.db
-        .update(ducklet)
+        .update(codelet)
         .set(updates)
-        .where(eq(ducklet.id, id))
+        .where(eq(codelet.id, id))
         .returning();
 
       return updated;
     }),
 
   /**
-   * Delete ducklet
+   * Delete codelet
    */
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -424,18 +424,18 @@ export const duckletRouter = createTRPCRouter({
       // Check ownership
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.id))
+        .from(codelet)
+        .where(eq(codelet.id, input.id))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      await ctx.db.delete(ducklet).where(eq(ducklet.id, input.id));
+      await ctx.db.delete(codelet).where(eq(codelet.id, input.id));
 
-      track("ducklet.deleted", {
-        duckletId: input.id,
+      track("codelet.deleted", {
+        codeletId: input.id,
         userId: ctx.session.user.id,
       });
 
@@ -443,12 +443,12 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Add member to ducklet
+   * Add member to codelet
    */
   addMember: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         userId: z.string().max(100),
         role: z.enum(["editor", "viewer"]).default("viewer"),
       }),
@@ -457,16 +457,16 @@ export const duckletRouter = createTRPCRouter({
       // Check ownership
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      await ctx.db.insert(duckletMember).values({
-        duckletId: input.duckletId,
+      await ctx.db.insert(codeletMember).values({
+        codeletId: input.codeletId,
         userId: input.userId,
         role: input.role,
       });
@@ -480,7 +480,7 @@ export const duckletRouter = createTRPCRouter({
   updateMemberRole: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         userId: z.string().max(100),
         role: z.enum(["editor", "viewer"]),
       }),
@@ -488,8 +488,8 @@ export const duckletRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -498,11 +498,11 @@ export const duckletRouter = createTRPCRouter({
 
       const [member] = await ctx.db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, input.userId),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, input.userId),
           ),
         )
         .limit(1);
@@ -512,17 +512,17 @@ export const duckletRouter = createTRPCRouter({
       }
 
       await ctx.db
-        .update(duckletMember)
+        .update(codeletMember)
         .set({ role: input.role })
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, input.userId),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, input.userId),
           ),
         );
 
-      track("ducklet.member.role_changed", {
-        duckletId: input.duckletId,
+      track("codelet.member.role_changed", {
+        codeletId: input.codeletId,
         actorId: ctx.session.user.id,
         memberId: input.userId,
         role: input.role,
@@ -532,12 +532,12 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Remove member from ducklet
+   * Remove member from codelet
    */
   removeMember: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         userId: z.string().max(100),
       }),
     )
@@ -545,8 +545,8 @@ export const duckletRouter = createTRPCRouter({
       // Check ownership
       const [existing] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -554,16 +554,16 @@ export const duckletRouter = createTRPCRouter({
       }
 
       await ctx.db
-        .delete(duckletMember)
+        .delete(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, input.userId),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, input.userId),
           ),
         );
 
-      track("ducklet.member.removed", {
-        duckletId: input.duckletId,
+      track("codelet.member.removed", {
+        codeletId: input.codeletId,
         actorId: ctx.session.user.id,
         memberId: input.userId,
       });
@@ -572,25 +572,25 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Invite a user to a ducklet by username
+   * Invite a user to a codelet by username
    */
   inviteUser: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         username: z.string().min(1).max(100),
         role: z.enum(["editor", "viewer"]).default("viewer"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // 1. Verify Ducklet Ownership
-      const [existingDucklet] = await ctx.db
+      // 1. Verify codelet Ownership
+      const [existingcodelet] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
-      if (!existingDucklet || existingDucklet.ownerId !== ctx.session.user.id) {
+      if (!existingcodelet || existingcodelet.ownerId !== ctx.session.user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Not authorized to invite users",
@@ -618,11 +618,11 @@ export const duckletRouter = createTRPCRouter({
       // 3. Check if already a member/invited
       const [existingMember] = await ctx.db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, targetUser.userId),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, targetUser.userId),
           ),
         )
         .limit(1);
@@ -641,12 +641,12 @@ export const duckletRouter = createTRPCRouter({
         } else if (existingMember.status === "requested") {
           // If they requested, just approve them by updating to active/invited
           await ctx.db
-            .update(duckletMember)
+            .update(codeletMember)
             .set({ status: "active", role: input.role })
             .where(
               and(
-                eq(duckletMember.duckletId, input.duckletId),
-                eq(duckletMember.userId, targetUser.userId),
+                eq(codeletMember.codeletId, input.codeletId),
+                eq(codeletMember.userId, targetUser.userId),
               ),
             );
           return { success: true, message: "Request approved" };
@@ -654,15 +654,15 @@ export const duckletRouter = createTRPCRouter({
       }
 
       // 4. Create Invitation
-      await ctx.db.insert(duckletMember).values({
-        duckletId: input.duckletId,
+      await ctx.db.insert(codeletMember).values({
+        codeletId: input.codeletId,
         userId: targetUser.userId,
         role: input.role,
         status: "invited",
       });
 
-      track("ducklet.member.invited", {
-        duckletId: input.duckletId,
+      track("codelet.member.invited", {
+        codeletId: input.codeletId,
         inviterId: ctx.session.user.id,
         inviteeId: targetUser.userId,
         role: input.role,
@@ -672,10 +672,10 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Request access to a ducklet
+   * Request access to a codelet
    */
   requestAccess: protectedProcedure
-    .input(z.object({ duckletId: z.number() }))
+    .input(z.object({ codeletId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!checkRequestAccessRate(ctx.session.user.id)) {
         throw new TRPCError({
@@ -684,18 +684,18 @@ export const duckletRouter = createTRPCRouter({
         });
       }
 
-      // 1. Verify Ducklet exists
-      const [existingDucklet] = await ctx.db
+      // 1. Verify codelet exists
+      const [existingcodelet] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
-      if (!existingDucklet) {
+      if (!existingcodelet) {
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      if (existingDucklet.ownerId === ctx.session.user.id) {
+      if (existingcodelet.ownerId === ctx.session.user.id) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "You are the owner",
@@ -705,11 +705,11 @@ export const duckletRouter = createTRPCRouter({
       // 2. Check existing membership
       const [existingMember] = await ctx.db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, ctx.session.user.id),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, ctx.session.user.id),
           ),
         )
         .limit(1);
@@ -722,12 +722,12 @@ export const duckletRouter = createTRPCRouter({
         if (existingMember.status === "invited") {
           // If invited, auto-accept
           await ctx.db
-            .update(duckletMember)
+            .update(codeletMember)
             .set({ status: "active" })
             .where(
               and(
-                eq(duckletMember.duckletId, input.duckletId),
-                eq(duckletMember.userId, ctx.session.user.id),
+                eq(codeletMember.codeletId, input.codeletId),
+                eq(codeletMember.userId, ctx.session.user.id),
               ),
             );
           return { success: true, message: "Joined via invitation" };
@@ -735,15 +735,15 @@ export const duckletRouter = createTRPCRouter({
       }
 
       // 3. Create Request
-      await ctx.db.insert(duckletMember).values({
-        duckletId: input.duckletId,
+      await ctx.db.insert(codeletMember).values({
+        codeletId: input.codeletId,
         userId: ctx.session.user.id,
         role: "viewer", // Default request role
         status: "requested",
       });
 
-      track("ducklet.access.requested", {
-        duckletId: input.duckletId,
+      track("codelet.access.requested", {
+        codeletId: input.codeletId,
         userId: ctx.session.user.id,
       });
 
@@ -754,16 +754,16 @@ export const duckletRouter = createTRPCRouter({
    * Respond to invitation (Accept/Decline)
    */
   respondToInvite: protectedProcedure
-    .input(z.object({ duckletId: z.number(), accept: z.boolean() }))
+    .input(z.object({ codeletId: z.number(), accept: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const [member] = await ctx.db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, ctx.session.user.id),
-            eq(duckletMember.status, "invited"),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, ctx.session.user.id),
+            eq(codeletMember.status, "invited"),
           ),
         )
         .limit(1);
@@ -777,21 +777,21 @@ export const duckletRouter = createTRPCRouter({
 
       if (input.accept) {
         await ctx.db
-          .update(duckletMember)
+          .update(codeletMember)
           .set({ status: "active" })
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, ctx.session.user.id),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, ctx.session.user.id),
             ),
           );
       } else {
         await ctx.db
-          .delete(duckletMember)
+          .delete(codeletMember)
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, ctx.session.user.id),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, ctx.session.user.id),
             ),
           );
       }
@@ -805,7 +805,7 @@ export const duckletRouter = createTRPCRouter({
   respondToRequest: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         userId: z.string().max(100),
         accept: z.boolean(),
         role: z.enum(["editor", "viewer"]).default("viewer"),
@@ -813,25 +813,25 @@ export const duckletRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // 1. Verify Ownership
-      const [existingDucklet] = await ctx.db
+      const [existingcodelet] = await ctx.db
         .select()
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
-      if (!existingDucklet || existingDucklet.ownerId !== ctx.session.user.id) {
+      if (!existingcodelet || existingcodelet.ownerId !== ctx.session.user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
       // 2. Find Request
       const [member] = await ctx.db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, input.duckletId),
-            eq(duckletMember.userId, input.userId),
-            eq(duckletMember.status, "requested"),
+            eq(codeletMember.codeletId, input.codeletId),
+            eq(codeletMember.userId, input.userId),
+            eq(codeletMember.status, "requested"),
           ),
         )
         .limit(1);
@@ -845,21 +845,21 @@ export const duckletRouter = createTRPCRouter({
 
       if (input.accept) {
         await ctx.db
-          .update(duckletMember)
+          .update(codeletMember)
           .set({ status: "active", role: input.role })
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, input.userId),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, input.userId),
             ),
           );
       } else {
         await ctx.db
-          .delete(duckletMember)
+          .delete(codeletMember)
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, input.userId),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, input.userId),
             ),
           );
       }
@@ -868,14 +868,14 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * Paginated chat history for a ducklet. Cursor is the createdAt
+   * Paginated chat history for a codelet. Cursor is the createdAt
    * timestamp of the oldest message in the previous page; messages
    * are returned newest-first.
    */
   chatHistory: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         limit: z.number().min(1).max(100).default(50),
         cursor: z.string().datetime().optional(),
       }),
@@ -884,18 +884,18 @@ export const duckletRouter = createTRPCRouter({
       // Same access rules as byId: owner, active member, or public reader.
       const [existing] = await ctx.db
         .select({
-          id: ducklet.id,
-          ownerId: ducklet.ownerId,
-          isPublic: ducklet.isPublic,
+          id: codelet.id,
+          ownerId: codelet.ownerId,
+          isPublic: codelet.isPublic,
         })
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Ducklet not found",
+          message: "codelet not found",
         });
       }
 
@@ -903,12 +903,12 @@ export const duckletRouter = createTRPCRouter({
       if (!existing.isPublic && existing.ownerId !== userId) {
         const [member] = await ctx.db
           .select()
-          .from(duckletMember)
+          .from(codeletMember)
           .where(
             and(
-              eq(duckletMember.duckletId, input.duckletId),
-              eq(duckletMember.userId, userId),
-              eq(duckletMember.status, "active"),
+              eq(codeletMember.codeletId, input.codeletId),
+              eq(codeletMember.userId, userId),
+              eq(codeletMember.status, "active"),
             ),
           )
           .limit(1);
@@ -918,25 +918,25 @@ export const duckletRouter = createTRPCRouter({
         }
       }
 
-      const conditions = [eq(duckletMessage.duckletId, input.duckletId)];
+      const conditions = [eq(codeletMessage.codeletId, input.codeletId)];
       if (input.cursor) {
-        conditions.push(lt(duckletMessage.createdAt, new Date(input.cursor)));
+        conditions.push(lt(codeletMessage.createdAt, new Date(input.cursor)));
       }
 
       const rows = await ctx.db
         .select({
-          id: duckletMessage.id,
-          userId: duckletMessage.userId,
-          authorUsername: duckletMessage.authorUsername,
-          content: duckletMessage.content,
-          createdAt: duckletMessage.createdAt,
+          id: codeletMessage.id,
+          userId: codeletMessage.userId,
+          authorUsername: codeletMessage.authorUsername,
+          content: codeletMessage.content,
+          createdAt: codeletMessage.createdAt,
           liveUsername: userProfile.username,
           livePhotoURL: userProfile.photoURL,
         })
-        .from(duckletMessage)
-        .leftJoin(userProfile, eq(duckletMessage.userId, userProfile.userId))
+        .from(codeletMessage)
+        .leftJoin(userProfile, eq(codeletMessage.userId, userProfile.userId))
         .where(and(...conditions))
-        .orderBy(desc(duckletMessage.createdAt))
+        .orderBy(desc(codeletMessage.createdAt))
         .limit(input.limit + 1);
 
       const hasMore = rows.length > input.limit;
@@ -965,19 +965,19 @@ export const duckletRouter = createTRPCRouter({
   createSnapshot: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         label: z.string().trim().max(200).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const [existing] = await ctx.db
         .select({
-          id: ducklet.id,
-          ownerId: ducklet.ownerId,
-          yjsData: ducklet.yjsData,
+          id: codelet.id,
+          ownerId: codelet.ownerId,
+          yjsData: codelet.yjsData,
         })
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -992,22 +992,22 @@ export const duckletRouter = createTRPCRouter({
       }
 
       const [created] = await ctx.db
-        .insert(duckletSnapshot)
+        .insert(codeletSnapshot)
         .values({
-          duckletId: input.duckletId,
+          codeletId: input.codeletId,
           yjsData: existing.yjsData,
           label: input.label,
           createdBy: ctx.session.user.id,
         })
         .returning({
-          id: duckletSnapshot.id,
-          label: duckletSnapshot.label,
-          createdAt: duckletSnapshot.createdAt,
+          id: codeletSnapshot.id,
+          label: codeletSnapshot.label,
+          createdAt: codeletSnapshot.createdAt,
         });
 
       if (created) {
-        track("ducklet.snapshot.created", {
-          duckletId: input.duckletId,
+        track("codelet.snapshot.created", {
+          codeletId: input.codeletId,
           snapshotId: created.id,
           userId: ctx.session.user.id,
         });
@@ -1017,16 +1017,16 @@ export const duckletRouter = createTRPCRouter({
     }),
 
   /**
-   * List snapshots for a ducklet (owner only — snapshots may contain
+   * List snapshots for a codelet (owner only — snapshots may contain
    * intermediate state the owner doesn't want to expose).
    */
   listSnapshots: protectedProcedure
-    .input(z.object({ duckletId: z.number() }))
+    .input(z.object({ codeletId: z.number() }))
     .query(async ({ ctx, input }) => {
       const [existing] = await ctx.db
-        .select({ ownerId: ducklet.ownerId })
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .select({ ownerId: codelet.ownerId })
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -1035,25 +1035,25 @@ export const duckletRouter = createTRPCRouter({
 
       const snapshots = await ctx.db
         .select({
-          id: duckletSnapshot.id,
-          label: duckletSnapshot.label,
-          createdAt: duckletSnapshot.createdAt,
-          createdBy: duckletSnapshot.createdBy,
+          id: codeletSnapshot.id,
+          label: codeletSnapshot.label,
+          createdAt: codeletSnapshot.createdAt,
+          createdBy: codeletSnapshot.createdBy,
           creatorUsername: userProfile.username,
         })
-        .from(duckletSnapshot)
+        .from(codeletSnapshot)
         .leftJoin(
           userProfile,
-          eq(duckletSnapshot.createdBy, userProfile.userId),
+          eq(codeletSnapshot.createdBy, userProfile.userId),
         )
-        .where(eq(duckletSnapshot.duckletId, input.duckletId))
-        .orderBy(desc(duckletSnapshot.createdAt));
+        .where(eq(codeletSnapshot.codeletId, input.codeletId))
+        .orderBy(desc(codeletSnapshot.createdAt));
 
       return snapshots;
     }),
 
   /**
-   * Restore a snapshot. Writes the snapshot's yjsData back to the ducklet
+   * Restore a snapshot. Writes the snapshot's yjsData back to the codelet
    * and bumps yjsVersion so connected clients are forced to reload.
    *
    * Note: this is a destructive operation; clients with unsaved edits will
@@ -1062,15 +1062,15 @@ export const duckletRouter = createTRPCRouter({
   restoreSnapshot: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         snapshotId: z.number(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const [existing] = await ctx.db
-        .select({ ownerId: ducklet.ownerId })
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .select({ ownerId: codelet.ownerId })
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -1079,11 +1079,11 @@ export const duckletRouter = createTRPCRouter({
 
       const [snap] = await ctx.db
         .select()
-        .from(duckletSnapshot)
+        .from(codeletSnapshot)
         .where(
           and(
-            eq(duckletSnapshot.id, input.snapshotId),
-            eq(duckletSnapshot.duckletId, input.duckletId),
+            eq(codeletSnapshot.id, input.snapshotId),
+            eq(codeletSnapshot.codeletId, input.codeletId),
           ),
         )
         .limit(1);
@@ -1096,12 +1096,12 @@ export const duckletRouter = createTRPCRouter({
       }
 
       await ctx.db
-        .update(ducklet)
+        .update(codelet)
         .set({ yjsData: snap.yjsData })
-        .where(eq(ducklet.id, input.duckletId));
+        .where(eq(codelet.id, input.codeletId));
 
-      track("ducklet.snapshot.restored", {
-        duckletId: input.duckletId,
+      track("codelet.snapshot.restored", {
+        codeletId: input.codeletId,
         snapshotId: input.snapshotId,
         userId: ctx.session.user.id,
       });
@@ -1115,15 +1115,15 @@ export const duckletRouter = createTRPCRouter({
   deleteSnapshot: protectedProcedure
     .input(
       z.object({
-        duckletId: z.number(),
+        codeletId: z.number(),
         snapshotId: z.number(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const [existing] = await ctx.db
-        .select({ ownerId: ducklet.ownerId })
-        .from(ducklet)
-        .where(eq(ducklet.id, input.duckletId))
+        .select({ ownerId: codelet.ownerId })
+        .from(codelet)
+        .where(eq(codelet.id, input.codeletId))
         .limit(1);
 
       if (!existing || existing.ownerId !== ctx.session.user.id) {
@@ -1131,11 +1131,11 @@ export const duckletRouter = createTRPCRouter({
       }
 
       await ctx.db
-        .delete(duckletSnapshot)
+        .delete(codeletSnapshot)
         .where(
           and(
-            eq(duckletSnapshot.id, input.snapshotId),
-            eq(duckletSnapshot.duckletId, input.duckletId),
+            eq(codeletSnapshot.id, input.snapshotId),
+            eq(codeletSnapshot.codeletId, input.codeletId),
           ),
         );
 

@@ -39,13 +39,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useTRPC } from "~/trpc/react";
 
 interface ShareModalProps {
-  duckletId: number;
+  codeletId: number;
 
   isOwner: boolean;
   isPublic: boolean;
 }
 
-export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
+export function ShareModal({ codeletId, isOwner, isPublic }: ShareModalProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [inviteUsername, setInviteUsername] = useState("");
@@ -53,18 +53,18 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Queries
-  const { data: ducklet, isLoading } = useQuery(
-    trpc.ducklet.byId.queryOptions({ id: duckletId }, { enabled: isOpen }),
+  const { data: codelet, isLoading } = useQuery(
+    trpc.codelet.byId.queryOptions({ id: codeletId }, { enabled: isOpen }),
   );
 
   // Mutations
   const inviteMutation = useMutation(
-    trpc.ducklet.inviteUser.mutationOptions({
+    trpc.codelet.inviteUser.mutationOptions({
       onSuccess: () => {
         toast.success("Invitation sent successfully");
         setInviteUsername("");
         queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
       },
       onError: (err) => {
@@ -74,11 +74,11 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
   );
 
   const removeMemberMutation = useMutation(
-    trpc.ducklet.removeMember.mutationOptions({
+    trpc.codelet.removeMember.mutationOptions({
       onSuccess: () => {
         toast.success("Member removed");
         queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
       },
       onError: (err) => {
@@ -88,11 +88,11 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
   );
 
   const updateMemberRoleMutation = useMutation(
-    trpc.ducklet.updateMemberRole.mutationOptions({
+    trpc.codelet.updateMemberRole.mutationOptions({
       onSuccess: () => {
         toast.success("Role updated");
         queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
       },
       onError: (err) => {
@@ -102,11 +102,11 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
   );
 
   const respondRequestMutation = useMutation(
-    trpc.ducklet.respondToRequest.mutationOptions({
+    trpc.codelet.respondToRequest.mutationOptions({
       onSuccess: (data, variables) => {
         toast.success(variables.accept ? "Request approved" : "Request denied");
         queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
       },
       onError: (err) => {
@@ -115,17 +115,17 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
     }),
   );
 
-  const updateDuckletMutation = useMutation(
-    trpc.ducklet.update.mutationOptions({
+  const updatecodeletMutation = useMutation(
+    trpc.codelet.update.mutationOptions({
       onSuccess: (data) => {
         if (!data) return;
-        toast.success(`Ducklet is now ${data.isPublic ? "Public" : "Private"}`);
-        const queryKey = trpc.ducklet.byId.queryKey({ id: duckletId });
+        toast.success(`codelet is now ${data.isPublic ? "Public" : "Private"}`);
+        const queryKey = trpc.codelet.byId.queryKey({ id: codeletId });
         queryClient.setQueryData(queryKey, (prev) =>
           prev ? { ...prev, isPublic: data.isPublic } : prev,
         );
         queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
       },
       onError: (err) => {
@@ -138,7 +138,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
     e.preventDefault();
     if (!inviteUsername.trim()) return;
     inviteMutation.mutate({
-      duckletId,
+      codeletId,
       username: inviteUsername,
       role: inviteRole,
     });
@@ -151,9 +151,9 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
   };
 
   const pendingRequests =
-    ducklet?.members.filter((m) => m.status === "requested") || [];
+    codelet?.members.filter((m) => m.status === "requested") || [];
   const activeMembers =
-    ducklet?.members.filter(
+    codelet?.members.filter(
       (m) => m.status === "active" || m.status === "invited",
     ) || [];
 
@@ -175,9 +175,9 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share Ducklet</DialogTitle>
+          <DialogTitle>Share codelet</DialogTitle>
           <DialogDescription>
-            Invite others to collaborate on this ducklet.
+            Invite others to collaborate on this codelet.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,7 +197,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
             size="sm"
             className="px-3"
             onClick={copyLink}
-            aria-label="Copy ducklet link"
+            aria-label="Copy codelet link"
           >
             <span className="sr-only">Copy</span>
             <Copy className="h-4 w-4" />
@@ -217,8 +217,8 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
             <Select
               value={isPublic ? "public" : "private"}
               onValueChange={(val) =>
-                updateDuckletMutation.mutate({
-                  id: duckletId,
+                updatecodeletMutation.mutate({
+                  id: codeletId,
                   isPublic: val === "public",
                 })
               }
@@ -333,7 +333,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
                               className="h-6 w-6 text-green-500 hover:bg-green-500/10 hover:text-green-600"
                               onClick={() =>
                                 respondRequestMutation.mutate({
-                                  duckletId,
+                                  codeletId,
                                   userId: member.userId,
                                   accept: true,
                                   role: "editor",
@@ -349,7 +349,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
                               className="h-6 w-6 text-red-500 hover:bg-red-500/10 hover:text-red-600"
                               onClick={() =>
                                 respondRequestMutation.mutate({
-                                  duckletId,
+                                  codeletId,
                                   userId: member.userId,
                                   accept: false,
                                 })
@@ -370,15 +370,15 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={ducklet?.owner?.photoURL ?? undefined}
+                          src={codelet?.owner?.photoURL ?? undefined}
                         />
                         <AvatarFallback>
-                          {ducklet?.owner?.username?.[0]?.toUpperCase()}
+                          {codelet?.owner?.username?.[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="text-sm leading-none font-medium">
-                          {ducklet?.owner?.username}
+                          {codelet?.owner?.username}
                         </p>
                         <p className="text-muted-foreground text-xs">Owner</p>
                       </div>
@@ -422,7 +422,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
                             value={member.role}
                             onValueChange={(val) =>
                               updateMemberRoleMutation.mutate({
-                                duckletId,
+                                codeletId,
                                 userId: member.userId,
                                 role: val as "editor" | "viewer",
                               })
@@ -445,7 +445,7 @@ export function ShareModal({ duckletId, isOwner, isPublic }: ShareModalProps) {
                             className="text-muted-foreground hover:text-destructive h-7 w-7"
                             onClick={() =>
                               removeMemberMutation.mutate({
-                                duckletId,
+                                codeletId,
                                 userId: member.userId,
                               })
                             }

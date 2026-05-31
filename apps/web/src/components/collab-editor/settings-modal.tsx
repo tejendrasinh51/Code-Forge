@@ -92,16 +92,16 @@ export function SettingsModal({
           variant="ghost"
           size="icon"
           title="Settings"
-          aria-label="Open ducklet settings"
+          aria-label="Open codelet settings"
         >
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl min-w-3xl">
         <DialogHeader>
-          <DialogTitle>Ducklet Settings</DialogTitle>
+          <DialogTitle>codelet Settings</DialogTitle>
           <DialogDescription>
-            Configure global settings for this ducklet.
+            Configure global settings for this codelet.
           </DialogDescription>
         </DialogHeader>
 

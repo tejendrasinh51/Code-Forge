@@ -7,9 +7,9 @@ import type { CollabTokenPayload } from "@acme/auth/collab-token";
 import {
   and,
   db,
-  ducklet,
-  duckletMember,
-  duckletMessage,
+  codelet,
+  codeletMember,
+  codeletMessage,
   eq,
   sql,
 } from "@acme/db";
@@ -25,7 +25,7 @@ interface CollabContext {
     id: string;
     username: string;
   };
-  duckletId: number;
+  codeletId: number;
   role: CollabTokenPayload["role"];
   isReadOnly: boolean;
 }
@@ -43,7 +43,7 @@ const allowedOrigins = (env.ALLOWED_WS_ORIGINS ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
-// Per-ducklet cache of (ownerId + active member IDs) used to validate
+// Per-codelet cache of (ownerId + active member IDs) used to validate
 // chat-message authorship at persist time. onStoreDocument fires on every
 // save tick — re-querying every time fans out one extra round trip per
 // keystroke burst.
@@ -54,27 +54,27 @@ const membershipCache = new Map<
 >();
 
 async function getAllowedAuthorIds(
-  duckletId: number,
+  codeletId: number,
   ownerId: string,
 ): Promise<Set<string>> {
-  const cached = membershipCache.get(duckletId);
+  const cached = membershipCache.get(codeletId);
   const now = Date.now();
   if (cached && cached.expiresAt > now) {
     return cached.allowed;
   }
 
   const members = await db
-    .select({ userId: duckletMember.userId })
-    .from(duckletMember)
+    .select({ userId: codeletMember.userId })
+    .from(codeletMember)
     .where(
       and(
-        eq(duckletMember.duckletId, duckletId),
-        eq(duckletMember.status, "active"),
+        eq(codeletMember.codeletId, codeletId),
+        eq(codeletMember.status, "active"),
       ),
     );
 
   const allowed = new Set<string>([ownerId, ...members.map((m) => m.userId)]);
-  membershipCache.set(duckletId, {
+  membershipCache.set(codeletId, {
     allowed,
     expiresAt: now + MEMBERSHIP_TTL_MS,
   });
@@ -105,8 +105,8 @@ const server = Server.configure({
       throw new Error("Origin not allowed");
     }
 
-    const expectedDuckletId = parseInt(documentName.replace("ducklet-", ""), 10);
-    if (!Number.isFinite(expectedDuckletId)) {
+    const expectedcodeletId = parseInt(documentName.replace("codelet-", ""), 10);
+    if (!Number.isFinite(expectedcodeletId)) {
       throw new Error("Invalid document name");
     }
 
@@ -118,34 +118,34 @@ const server = Server.configure({
       throw new Error("Invalid or expired token");
     }
 
-    if (payload.duckletId !== expectedDuckletId) {
+    if (payload.codeletId !== expectedcodeletId) {
       throw new Error("Token does not match document");
     }
 
-    const [existingDucklet] = await db
+    const [existingcodelet] = await db
       .select()
-      .from(ducklet)
-      .where(eq(ducklet.id, expectedDuckletId))
+      .from(codelet)
+      .where(eq(codelet.id, expectedcodeletId))
       .limit(1);
 
-    if (!existingDucklet) {
-      throw new Error("Ducklet not found");
+    if (!existingcodelet) {
+      throw new Error("codelet not found");
     }
 
     // Re-verify access at connection time (token may have been issued
     // before access was revoked).
     let isReadOnly = true;
-    if (existingDucklet.ownerId === payload.userId) {
+    if (existingcodelet.ownerId === payload.userId) {
       isReadOnly = false;
     } else {
       const [member] = await db
         .select()
-        .from(duckletMember)
+        .from(codeletMember)
         .where(
           and(
-            eq(duckletMember.duckletId, expectedDuckletId),
-            eq(duckletMember.userId, payload.userId),
-            eq(duckletMember.status, "active"),
+            eq(codeletMember.codeletId, expectedcodeletId),
+            eq(codeletMember.userId, payload.userId),
+            eq(codeletMember.status, "active"),
           ),
         )
         .limit(1);
@@ -154,8 +154,8 @@ const server = Server.configure({
         isReadOnly = false;
       } else if (member?.role === "viewer") {
         isReadOnly = true;
-      } else if (existingDucklet.isPublic) {
-        // Public ducklet, non-member: read-only is allowed.
+      } else if (existingcodelet.isPublic) {
+        // Public codelet, non-member: read-only is allowed.
         isReadOnly = true;
       } else {
         throw new Error("Access denied");
@@ -169,7 +169,7 @@ const server = Server.configure({
         id: payload.userId,
         username: payload.username,
       },
-      duckletId: expectedDuckletId,
+      codeletId: expectedcodeletId,
       role: payload.role,
       isReadOnly,
     };
@@ -178,14 +178,14 @@ const server = Server.configure({
 
   // Load existing document from PostgreSQL
   onLoadDocument: async ({ documentName, document }) => {
-    const duckletId = parseInt(documentName.replace("ducklet-", ""), 10);
-    if (!Number.isFinite(duckletId)) return;
+    const codeletId = parseInt(documentName.replace("codelet-", ""), 10);
+    if (!Number.isFinite(codeletId)) return;
 
     try {
       const [existing] = await db
-        .select({ yjsData: ducklet.yjsData })
-        .from(ducklet)
-        .where(eq(ducklet.id, duckletId))
+        .select({ yjsData: codelet.yjsData })
+        .from(codelet)
+        .where(eq(codelet.id, codeletId))
         .limit(1);
 
       if (existing?.yjsData) {
@@ -227,39 +227,39 @@ const server = Server.configure({
 
   // Store document to PostgreSQL
   onStoreDocument: async ({ documentName, document, clientsCount }) => {
-    const duckletId = parseInt(documentName.replace("ducklet-", ""), 10);
-    if (!Number.isFinite(duckletId)) return;
+    const codeletId = parseInt(documentName.replace("codelet-", ""), 10);
+    if (!Number.isFinite(codeletId)) return;
 
     try {
       const update = encodeStateAsUpdate(document);
       const data = Buffer.from(update).toString("base64");
 
-      const [duckletData] = await db
+      const [codeletData] = await db
         .select({
-          id: ducklet.id,
-          ownerId: ducklet.ownerId,
+          id: codelet.id,
+          ownerId: codelet.ownerId,
         })
-        .from(ducklet)
-        .where(eq(ducklet.id, duckletId))
+        .from(codelet)
+        .where(eq(codelet.id, codeletId))
         .limit(1);
 
-      if (!duckletData) {
-        console.error(`Ducklet ${duckletId} not found`);
+      if (!codeletData) {
+        console.error(`codelet ${codeletId} not found`);
         return;
       }
 
       await db
-        .update(ducklet)
+        .update(codelet)
         .set({
           yjsData: data,
           lastClientsCount: clientsCount,
-          yjsVersion: sql`${ducklet.yjsVersion} + 1`,
+          yjsVersion: sql`${codelet.yjsVersion} + 1`,
           updatedAt: new Date(),
         })
-        .where(eq(ducklet.id, duckletId));
+        .where(eq(codelet.id, codeletId));
 
       // Persist chat messages. Only keep ones whose userId is either the
-      // ducklet owner or an active member — this prevents a forged chat
+      // codelet owner or an active member — this prevents a forged chat
       // message from being attributed to an arbitrary user in the DB.
       const messagesArray = document.getArray<ChatMessage>("messages");
       const messages = messagesArray.toArray();
@@ -271,7 +271,7 @@ const server = Server.configure({
 
         const allowedUserIds =
           candidateUserIds.length > 0
-            ? await getAllowedAuthorIds(duckletId, duckletData.ownerId)
+            ? await getAllowedAuthorIds(codeletId, codeletData.ownerId)
             : new Set<string>();
 
         const values = messages
@@ -285,7 +285,7 @@ const server = Server.configure({
           )
           .map((msg) => ({
             id: msg.id,
-            duckletId,
+            codeletId,
             userId: msg.userId,
             authorUsername:
               typeof msg.username === "string"
@@ -296,11 +296,11 @@ const server = Server.configure({
           }));
 
         if (values.length > 0) {
-          await db.insert(duckletMessage).values(values).onConflictDoNothing();
+          await db.insert(codeletMessage).values(values).onConflictDoNothing();
         }
       }
 
-      // Preview generation is throttled per ducklet (leading+trailing edge)
+      // Preview generation is throttled per codelet (leading+trailing edge)
       // so rapid edits don't fan out into a Puppeteer launch per debounce tick.
       const html = document.getText("html").toString();
       const css = document.getText("css").toString();
@@ -309,7 +309,7 @@ const server = Server.configure({
       const headScripts = (settingsMap.get("headScripts") as string) ?? "";
 
       schedulePreview({
-        duckletId,
+        codeletId,
         html,
         css,
         js,

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { db, ducklet, eq } from "@acme/db";
+import { db, codelet, eq } from "@acme/db";
 import { uploadFile } from "@acme/storage";
 import chromium from "@sparticuz/chromium";
 import nodeHtmlToImage from "node-html-to-image";
@@ -66,7 +66,7 @@ function sanitizeHeadScripts(input: string): string {
 }
 
 interface PreviewPayload {
-  duckletId: number;
+  codeletId: number;
   html: string;
   css: string;
   js: string;
@@ -78,36 +78,36 @@ const lastFiredAt = new Map<number, number>();
 const pendingPayloads = new Map<number, PreviewPayload>();
 const pendingTimers = new Map<number, NodeJS.Timeout>();
 
-// Leading-and-trailing throttle: first save per ducklet renders immediately;
+// Leading-and-trailing throttle: first save per codelet renders immediately;
 // subsequent saves within the window are coalesced into one render at the
-// window's end. Guarantees at most one Puppeteer launch per ducklet per
+// window's end. Guarantees at most one Puppeteer launch per codelet per
 // PREVIEW_MIN_INTERVAL_MS.
 export function schedulePreview(payload: PreviewPayload) {
-  const { duckletId } = payload;
+  const { codeletId } = payload;
   const now = Date.now();
-  const last = lastFiredAt.get(duckletId) ?? 0;
+  const last = lastFiredAt.get(codeletId) ?? 0;
   const elapsed = now - last;
 
-  if (elapsed >= PREVIEW_MIN_INTERVAL_MS && !pendingTimers.has(duckletId)) {
-    lastFiredAt.set(duckletId, now);
+  if (elapsed >= PREVIEW_MIN_INTERVAL_MS && !pendingTimers.has(codeletId)) {
+    lastFiredAt.set(codeletId, now);
     void generateAndStorePreview(payload);
     return;
   }
 
-  pendingPayloads.set(duckletId, payload);
-  if (pendingTimers.has(duckletId)) return;
+  pendingPayloads.set(codeletId, payload);
+  if (pendingTimers.has(codeletId)) return;
 
   const delay = Math.max(0, PREVIEW_MIN_INTERVAL_MS - elapsed);
   const timer = setTimeout(() => {
-    pendingTimers.delete(duckletId);
-    const latest = pendingPayloads.get(duckletId);
-    pendingPayloads.delete(duckletId);
+    pendingTimers.delete(codeletId);
+    const latest = pendingPayloads.get(codeletId);
+    pendingPayloads.delete(codeletId);
     if (latest) {
-      lastFiredAt.set(duckletId, Date.now());
+      lastFiredAt.set(codeletId, Date.now());
       void generateAndStorePreview(latest);
     }
   }, delay);
-  pendingTimers.set(duckletId, timer);
+  pendingTimers.set(codeletId, timer);
 }
 
 export function cancelPreviewSchedules() {
@@ -117,7 +117,7 @@ export function cancelPreviewSchedules() {
 }
 
 export async function generateAndStorePreview({
-  duckletId,
+  codeletId,
   html,
   css,
   js: _js,
@@ -189,17 +189,17 @@ export async function generateAndStorePreview({
       type: "png",
     })) as Buffer;
 
-    const key = `preview/${duckletId}.png`;
+    const key = `preview/${codeletId}.png`;
 
     await uploadFile(key, image, "image/png");
 
     await db
-      .update(ducklet)
+      .update(codelet)
       .set({
         previewImage: key,
         updatedAt: new Date(),
       })
-      .where(eq(ducklet.id, duckletId));
+      .where(eq(codelet.id, codeletId));
   } catch (err) {
     console.error("Failed to generate/store preview image:", err);
   }

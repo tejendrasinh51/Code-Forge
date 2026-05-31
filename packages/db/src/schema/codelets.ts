@@ -14,8 +14,8 @@ import {
 import { user } from "./auth-schema";
 import { memberRoleEnum, memberStatusEnum } from "./enums";
 
-export const ducklet = pgTable(
-  "ducklet",
+export const codelet = pgTable(
+  "codelet",
   {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
@@ -42,17 +42,17 @@ export const ducklet = pgTable(
     updatedAt: timestamp("updated_at").$onUpdateFn(() => sql`now()`),
   },
   (t) => [
-    index("ducklet_owner_idx").on(t.ownerId),
-    index("ducklet_is_public_idx").on(t.isPublic),
+    index("codelet_owner_idx").on(t.ownerId),
+    index("codelet_is_public_idx").on(t.isPublic),
   ],
 );
 
-export const duckletMember = pgTable(
-  "ducklet_member",
+export const codeletMember = pgTable(
+  "codelet_member",
   {
-    duckletId: integer("ducklet_id")
+    codeletId: integer("codelet_id")
       .notNull()
-      .references(() => ducklet.id, { onDelete: "cascade" }),
+      .references(() => codelet.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -61,30 +61,30 @@ export const duckletMember = pgTable(
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.duckletId, t.userId] }),
-    index("ducklet_member_user_idx").on(t.userId),
+    primaryKey({ columns: [t.codeletId, t.userId] }),
+    index("codelet_member_user_idx").on(t.userId),
   ],
 );
 
 // Relations
-export const duckletRelations = relations(ducklet, ({ one, many }) => ({
+export const codeletRelations = relations(codelet, ({ one, many }) => ({
   owner: one(user, {
-    fields: [ducklet.ownerId],
+    fields: [codelet.ownerId],
     references: [user.id],
   }),
-  members: many(duckletMember),
+  members: many(codeletMember),
 }));
 
-export const duckletMemberRelations = relations(duckletMember, ({ one }) => ({
-  ducklet: one(ducklet, {
-    fields: [duckletMember.duckletId],
-    references: [ducklet.id],
+export const codeletMemberRelations = relations(codeletMember, ({ one }) => ({
+  codelet: one(codelet, {
+    fields: [codeletMember.codeletId],
+    references: [codelet.id],
   }),
   user: one(user, {
-    fields: [duckletMember.userId],
+    fields: [codeletMember.userId],
     references: [user.id],
   }),
 }));
 
-export type Ducklet = typeof ducklet.$inferSelect;
-export type NewDucklet = typeof ducklet.$inferInsert;
+export type codelet = typeof codelet.$inferSelect;
+export type Newcodelet = typeof codelet.$inferInsert;

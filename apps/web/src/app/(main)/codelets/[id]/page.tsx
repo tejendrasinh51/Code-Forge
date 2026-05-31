@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 import type { ChatMessage, UserPresence } from "~/hooks/use-socket";
 import { authClient } from "~/auth/client";
-import { RenameDuckletDialog } from "~/components/collab-editor/rename-ducklet-dialog";
+import { RenamecodeletDialog } from "~/components/collab-editor/rename-codelet-dialog";
 import { SettingsModal } from "~/components/collab-editor/settings-modal";
 import { ShareModal } from "~/components/collab-editor/share-modal";
 import { useSignIn } from "~/components/sign-in-dialog";
@@ -34,7 +34,7 @@ import {
 } from "~/components/ui/resizable";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { useIsMobile } from "~/hooks/use-is-mobile";
-import { useSocketDucklet } from "~/hooks/use-socket";
+import { useSocketcodelet } from "~/hooks/use-socket";
 import { track } from "~/lib/analytics";
 import { useTRPC } from "~/trpc/react";
 
@@ -55,13 +55,13 @@ const LayoutManager = dynamic(
   },
 );
 
-export default function DuckletPage({
+export default function codeletPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: duckletIdStr } = use(params);
-  const duckletId = parseInt(duckletIdStr);
+  const { id: codeletIdStr } = use(params);
+  const codeletId = parseInt(codeletIdStr);
   const router = useRouter();
   const trpc = useTRPC();
 
@@ -71,21 +71,21 @@ export default function DuckletPage({
   const username = session?.user?.name ?? "Anonymous";
   const photoURL = session?.user?.image ?? undefined;
 
-  // Fetch ducklet data
+  // Fetch codelet data
   const {
-    data: ducklet,
-    isLoading: isDuckletLoading,
+    data: codelet,
+    isLoading: iscodeletLoading,
     error,
   } = useQuery(
-    trpc.ducklet.byId.queryOptions({ id: duckletId }, { enabled: !!duckletId }),
+    trpc.codelet.byId.queryOptions({ id: codeletId }, { enabled: !!codeletId }),
   );
 
   // Fetch a short-lived collab token. The websocket will not connect until
-  // the server has authorized this user for this ducklet.
+  // the server has authorized this user for this codelet.
   const { data: collabAuth } = useQuery(
-    trpc.ducklet.getCollabToken.queryOptions(
-      { duckletId },
-      { enabled: !!duckletId && !!userId, staleTime: 30 * 60 * 1000 },
+    trpc.codelet.getCollabToken.queryOptions(
+      { codeletId },
+      { enabled: !!codeletId && !!userId, staleTime: 30 * 60 * 1000 },
     ),
   );
 
@@ -98,8 +98,8 @@ export default function DuckletPage({
     updateCursor,
     provider,
     ydoc,
-  } = useSocketDucklet({
-    duckletId: duckletIdStr,
+  } = useSocketcodelet({
+    codeletId: codeletIdStr,
     userId,
     username,
     photoURL,
@@ -137,7 +137,7 @@ export default function DuckletPage({
     };
   }, [ydoc]);
 
-  // The Hocuspocus server bumps a `meta` Y.Map field whenever ducklet
+  // The Hocuspocus server bumps a `meta` Y.Map field whenever codelet
   // membership / visibility changes (driven by the API → Redis →
   // Hocuspocus bridge). Refetch `byId` so the share modal's pending
   // requests, member list, and visibility state stay in sync without
@@ -147,12 +147,12 @@ export default function DuckletPage({
     const meta = ydoc.getMap("meta");
     const onChange = () => {
       void queryClient.invalidateQueries(
-        trpc.ducklet.byId.queryFilter({ id: duckletId }),
+        trpc.codelet.byId.queryFilter({ id: codeletId }),
       );
     };
     meta.observe(onChange);
     return () => meta.unobserve(onChange);
-  }, [ydoc, queryClient, trpc, duckletId]);
+  }, [ydoc, queryClient, trpc, codeletId]);
 
   // Update Y.js when head/body change
   const handleHeadChange = (value: string) => {
@@ -177,15 +177,15 @@ export default function DuckletPage({
   const [renameOpen, setRenameOpen] = useState(false);
 
   const forkMutation = useMutation(
-    trpc.ducklet.fork.mutationOptions({
+    trpc.codelet.fork.mutationOptions({
       onSuccess: (forked) => {
         if (!forked) return;
-        track("ducklet-fork", { from: "detail", sourceId: duckletId });
-        toast.success("Forked to your ducklets");
+        track("codelet-fork", { from: "detail", sourceId: codeletId });
+        toast.success("Forked to your codelets");
         void queryClient.invalidateQueries(
-          trpc.ducklet.list.infiniteQueryFilter(),
+          trpc.codelet.list.infiniteQueryFilter(),
         );
-        router.push(`/ducklets/${forked.id}`);
+        router.push(`/codelets/${forked.id}`);
       },
       onError: (err) => toast.error(err.message),
     }),
@@ -198,33 +198,33 @@ export default function DuckletPage({
   };
 
   // Determine Permissions
-  const isOwner = ducklet?.ownerId === userId;
-  const userStatus = ducklet?.currentUserStatus;
+  const isOwner = codelet?.ownerId === userId;
+  const userStatus = codelet?.currentUserStatus;
   const isMember = userStatus === "active";
   const canEdit =
     isOwner ||
     (isMember &&
-      ducklet?.members.find((m) => m.userId === userId)?.role === "editor");
-  const isPublic = ducklet?.isPublic ?? false;
+      codelet?.members.find((m) => m.userId === userId)?.role === "editor");
+  const isPublic = codelet?.isPublic ?? false;
 
-  // Redirect non-members to guest page for public ducklets
+  // Redirect non-members to guest page for public codelets
   // This also handles access revocation during active session
   useEffect(() => {
-    if (ducklet && isPublic && !isOwner && !isMember) {
-      router.push(`/ducklets/${duckletId}/guest`);
+    if (codelet && isPublic && !isOwner && !isMember) {
+      router.push(`/codelets/${codeletId}/guest`);
     }
-  }, [ducklet, isPublic, isOwner, isMember, duckletId, router]);
+  }, [codelet, isPublic, isOwner, isMember, codeletId, router]);
 
   // Listen to websocket disconnects for access revocation
   useEffect(() => {
-    if (!provider || !ducklet) return;
+    if (!provider || !codelet) return;
 
     const handleAuthFailure = (event: { reason?: string }) => {
-      console.log("[Ducklet] Connection closed:", event);
-      // If connection closes and ducklet is public, redirect to guest mode
+      console.log("[codelet] Connection closed:", event);
+      // If connection closes and codelet is public, redirect to guest mode
       // This happens when server kicks user due to access revocation
-      if (ducklet.isPublic && !isOwner) {
-        router.push(`/ducklets/${duckletId}/guest`);
+      if (codelet.isPublic && !isOwner) {
+        router.push(`/codelets/${codeletId}/guest`);
       }
     };
 
@@ -236,32 +236,32 @@ export default function DuckletPage({
       provider.off("close", handleAuthFailure);
       provider.off("authenticationFailed", handleAuthFailure);
     };
-  }, [provider, ducklet, isOwner, duckletId, router]);
+  }, [provider, codelet, isOwner, codeletId, router]);
 
-  if (isDuckletLoading) {
+  if (iscodeletLoading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-muted-foreground animate-pulse">
-          Loading ducklet...
+          Loading codelet...
         </div>
       </div>
     );
   }
 
-  if (error || !ducklet) {
+  if (error || !codelet) {
     const code = error?.data?.code;
     if (code === "FORBIDDEN") {
-      return <AccessDeniedScreen duckletId={duckletId} isAuthed={!!userId} />;
+      return <AccessDeniedScreen codeletId={codeletId} isAuthed={!!userId} />;
     }
     return (
       <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
         <h2 className="text-destructive text-xl font-bold">
-          {code === "NOT_FOUND" ? "Ducklet not found" : "Error loading ducklet"}
+          {code === "NOT_FOUND" ? "codelet not found" : "Error loading codelet"}
         </h2>
         <p className="text-muted-foreground">
-          {error?.message ?? "This ducklet does not exist."}
+          {error?.message ?? "This codelet does not exist."}
         </p>
-        <Button onClick={() => router.push("/ducklets")}>Back to List</Button>
+        <Button onClick={() => router.push("/codelets")}>Back to List</Button>
       </div>
     );
   }
@@ -270,7 +270,7 @@ export default function DuckletPage({
     <div className="flex h-[100dvh] flex-col">
       <header className="bg-muted/20 flex items-center justify-between gap-2 border-b px-2 py-2 sm:px-4">
         <div className="flex shrink-0 items-center gap-2">
-          <Link href="/ducklets">
+          <Link href="/codelets">
             <Button variant="outline" size="sm" className="px-2 sm:px-3">
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
@@ -285,14 +285,14 @@ export default function DuckletPage({
               className="hover:text-primary block max-w-full truncate font-semibold transition-colors"
               title="Rename"
             >
-              {ducklet.name}
+              {codelet.name}
             </button>
           ) : (
-            <h1 className="truncate font-semibold">{ducklet.name}</h1>
+            <h1 className="truncate font-semibold">{codelet.name}</h1>
           )}
-          {ducklet.description && (
+          {codelet.description && (
             <p className="text-muted-foreground hidden truncate text-xs sm:block">
-              {ducklet.description}
+              {codelet.description}
             </p>
           )}
         </div>
@@ -306,10 +306,10 @@ export default function DuckletPage({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => forkMutation.mutate({ id: duckletId })}
+              onClick={() => forkMutation.mutate({ id: codeletId })}
               disabled={forkMutation.isPending}
-              title="Fork this ducklet"
-              aria-label="Fork ducklet"
+              title="Fork this codelet"
+              aria-label="Fork codelet"
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -323,7 +323,7 @@ export default function DuckletPage({
           />
 
           <ShareModal
-            duckletId={duckletId}
+            codeletId={codeletId}
             isOwner={isOwner}
             isPublic={isPublic}
           />
@@ -423,11 +423,11 @@ export default function DuckletPage({
       </div>
 
       {isOwner && (
-        <RenameDuckletDialog
+        <RenamecodeletDialog
           open={renameOpen}
           onOpenChange={setRenameOpen}
-          duckletId={duckletId}
-          currentName={ducklet.name}
+          codeletId={codeletId}
+          currentName={codelet.name}
         />
       )}
     </div>
@@ -566,18 +566,18 @@ function ConnectionBadge({
 }
 
 function AccessDeniedScreen({
-  duckletId,
+  codeletId,
   isAuthed,
 }: {
-  duckletId: number;
+  codeletId: number;
   isAuthed: boolean;
 }) {
   const trpc = useTRPC();
   const { openSignIn } = useSignIn();
   const requestAccess = useMutation(
-    trpc.ducklet.requestAccess.mutationOptions({
+    trpc.codelet.requestAccess.mutationOptions({
       onSuccess: (data, variables) => {
-        track("ducklet-request-access", { id: variables.duckletId });
+        track("codelet-request-access", { id: variables.codeletId });
         toast.success(data.message ?? "Request sent");
       },
       onError: (err) => toast.error(err.message),
@@ -589,15 +589,15 @@ function AccessDeniedScreen({
       <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
         <Lock className="text-muted-foreground h-7 w-7" />
       </div>
-      <h2 className="text-2xl font-semibold">This ducklet is private</h2>
+      <h2 className="text-2xl font-semibold">This codelet is private</h2>
       <p className="text-muted-foreground">
-        You don't have access to this ducklet. Ask the owner to invite you, or
+        You don't have access to this codelet. Ask the owner to invite you, or
         request access below.
       </p>
       <div className="flex gap-2">
         {isAuthed ? (
           <Button
-            onClick={() => requestAccess.mutate({ duckletId })}
+            onClick={() => requestAccess.mutate({ codeletId })}
             disabled={requestAccess.isPending || requestAccess.isSuccess}
           >
             {requestAccess.isSuccess
@@ -610,8 +610,8 @@ function AccessDeniedScreen({
           <Button
             onClick={() =>
               openSignIn({
-                source: "ducklet-access-denied",
-                callbackURL: `/ducklets/${duckletId}`,
+                source: "codelet-access-denied",
+                callbackURL: `/codelets/${codeletId}`,
               })
             }
           >
@@ -619,7 +619,7 @@ function AccessDeniedScreen({
           </Button>
         )}
         <Button variant="outline" asChild>
-          <Link href="/ducklets">Back to list</Link>
+          <Link href="/codelets">Back to list</Link>
         </Button>
       </div>
     </div>

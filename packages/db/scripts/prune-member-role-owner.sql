@@ -1,5 +1,5 @@
 -- Drop the dead "owner" value from member_role.
--- Ownership is tracked exclusively via ducklet.owner_id; no ducklet_member row
+-- Ownership is tracked exclusively via codelet.owner_id; no codelet_member row
 -- should ever carry role='owner', but if existing prod data has any, promote
 -- those users to 'editor' before recreating the enum without the value.
 --
@@ -10,13 +10,13 @@
 BEGIN;
 
 -- 1. Defensive cleanup: any straggler rows get demoted to editor.
-UPDATE ducklet_member SET role = 'editor' WHERE role = 'owner';
+UPDATE codelet_member SET role = 'editor' WHERE role = 'owner';
 
 -- 2. Recreate the enum without "owner".
 ALTER TYPE member_role RENAME TO member_role__old;
 CREATE TYPE member_role AS ENUM ('editor', 'viewer');
 
-ALTER TABLE ducklet_member
+ALTER TABLE codelet_member
   ALTER COLUMN role DROP DEFAULT,
   ALTER COLUMN role TYPE member_role USING role::text::member_role,
   ALTER COLUMN role SET DEFAULT 'viewer';

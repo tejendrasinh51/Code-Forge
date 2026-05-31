@@ -41,7 +41,7 @@ export function ClosingCta() {
               <ArrowRight className="ml-1 size-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
           </Link>
-          <Link href="/ducklets">
+          <Link href="/codelets">
             <Button
               size="lg"
               variant="outline"

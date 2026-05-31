@@ -18,19 +18,19 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { useTRPC } from "~/trpc/react";
 
-interface RenameDuckletDialogProps {
+interface RenamecodeletDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  duckletId: number;
+  codeletId: number;
   currentName: string;
 }
 
-export function RenameDuckletDialog({
+export function RenamecodeletDialog({
   open,
   onOpenChange,
-  duckletId,
+  codeletId,
   currentName,
-}: RenameDuckletDialogProps) {
+}: RenamecodeletDialogProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [name, setName] = useState(currentName);
@@ -40,20 +40,20 @@ export function RenameDuckletDialog({
   }, [open, currentName]);
 
   const renameMutation = useMutation(
-    trpc.ducklet.update.mutationOptions({
+    trpc.codelet.update.mutationOptions({
       onSuccess: (data) => {
         if (!data) return;
-        toast.success("Ducklet renamed");
+        toast.success("codelet renamed");
 
-        const byIdKey = trpc.ducklet.byId.queryKey({ id: duckletId });
+        const byIdKey = trpc.codelet.byId.queryKey({ id: codeletId });
         queryClient.setQueryData(byIdKey, (prev) =>
           prev ? { ...prev, name: data.name } : prev,
         );
         void queryClient.invalidateQueries(
-          trpc.ducklet.byId.queryFilter({ id: duckletId }),
+          trpc.codelet.byId.queryFilter({ id: codeletId }),
         );
         void queryClient.invalidateQueries(
-          trpc.ducklet.list.infiniteQueryFilter(),
+          trpc.codelet.list.infiniteQueryFilter(),
         );
         onOpenChange(false);
       },
@@ -68,7 +68,7 @@ export function RenameDuckletDialog({
       onOpenChange(false);
       return;
     }
-    renameMutation.mutate({ id: duckletId, name: trimmed });
+    renameMutation.mutate({ id: codeletId, name: trimmed });
   };
 
   return (
@@ -76,15 +76,15 @@ export function RenameDuckletDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Rename Ducklet</DialogTitle>
+            <DialogTitle>Rename codelet</DialogTitle>
             <DialogDescription>
-              Give your ducklet a clearer name.
+              Give your codelet a clearer name.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-4">
-            <Label htmlFor="ducklet-name">Name</Label>
+            <Label htmlFor="codelet-name">Name</Label>
             <Input
-              id="ducklet-name"
+              id="codelet-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}

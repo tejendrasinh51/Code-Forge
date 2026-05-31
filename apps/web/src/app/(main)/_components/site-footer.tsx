@@ -16,7 +16,7 @@ const FOOTER_LINKS: {
   {
     heading: "Collaborate",
     links: [
-      { label: "Codelets", href: "/ducklets" },
+      { label: "Codelets", href: "/codelets" },
       { label: "Contests", href: "/contests" },
       { label: "Dashboard", href: "/dashboard" },
     ],

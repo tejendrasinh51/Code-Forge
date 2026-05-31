@@ -9,15 +9,15 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
-import { ducklet } from "./ducklets";
+import { codelet } from "./codelets";
 
-export const duckletMessage = pgTable(
-  "ducklet_message",
+export const codeletMessage = pgTable(
+  "codelet_message",
   {
     id: varchar("id", { length: 100 }).primaryKey(),
-    duckletId: integer("ducklet_id")
+    codeletId: integer("codelet_id")
       .notNull()
-      .references(() => ducklet.id, { onDelete: "cascade" }),
+      .references(() => codelet.id, { onDelete: "cascade" }),
     // userId becomes null when the author is deleted — the row itself
     // stays so chat history isn't punched full of holes. authorUsername
     // is the snapshot of the username at send-time so we can still render
@@ -28,17 +28,17 @@ export const duckletMessage = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [
-    index("ducklet_message_room_created_idx").on(t.duckletId, t.createdAt),
+    index("codelet_message_room_created_idx").on(t.codeletId, t.createdAt),
   ],
 );
 
-export const duckletMessageRelations = relations(duckletMessage, ({ one }) => ({
-  ducklet: one(ducklet, {
-    fields: [duckletMessage.duckletId],
-    references: [ducklet.id],
+export const codeletMessageRelations = relations(codeletMessage, ({ one }) => ({
+  codelet: one(codelet, {
+    fields: [codeletMessage.codeletId],
+    references: [codelet.id],
   }),
   user: one(user, {
-    fields: [duckletMessage.userId],
+    fields: [codeletMessage.userId],
     references: [user.id],
   }),
 }));

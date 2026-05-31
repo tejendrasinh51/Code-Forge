@@ -5,12 +5,12 @@ export type CollabRole = "owner" | "editor" | "viewer";
 export interface CollabTokenPayload {
   userId: string;
   username: string;
-  duckletId: number;
+  codeletId: number;
   role: CollabRole;
   exp: number;
 }
 
-const DOMAIN = "ducklet-collab-v1";
+const DOMAIN = "codelet-collab-v1";
 
 function deriveKey(rootSecret: string): Buffer {
   if (!rootSecret) {
@@ -70,7 +70,7 @@ export function verifyCollabToken(
   if (
     typeof p.userId !== "string" ||
     typeof p.username !== "string" ||
-    typeof p.duckletId !== "number" ||
+    typeof p.codeletId !== "number" ||
     typeof p.exp !== "number" ||
     (p.role !== "owner" && p.role !== "editor" && p.role !== "viewer")
   ) {
@@ -81,7 +81,7 @@ export function verifyCollabToken(
   return {
     userId: p.userId,
     username: p.username,
-    duckletId: p.duckletId,
+    codeletId: p.codeletId,
     role: p.role,
     exp: p.exp,
   };

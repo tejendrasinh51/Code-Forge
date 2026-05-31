@@ -32,7 +32,7 @@ const FEATURES: Feature[] = [
     name: "Codelets",
     description:
       "Real-time collaborative editors. Code together with a shared cursor, live output, and chat.",
-    href: "/ducklets",
+    href: "/codelets",
     cta: "Open a Codelet",
     className: "lg:col-span-1",
     glow: "rgba(52,211,153,0.22)",

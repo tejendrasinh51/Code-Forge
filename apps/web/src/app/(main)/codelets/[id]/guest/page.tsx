@@ -14,18 +14,18 @@ import * as Y from "yjs";
 import { authClient } from "~/auth/client";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { useSocketDucklet } from "~/hooks/use-socket";
+import { useSocketcodelet } from "~/hooks/use-socket";
 import { track } from "~/lib/analytics";
 import { useTRPC } from "~/trpc/react";
 import { GuestEditor } from "./guest-editor";
 
-export default function GuestDuckletPage({
+export default function GuestcodeletPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: duckletIdStr } = use(params);
-  const duckletId = parseInt(duckletIdStr);
+  const { id: codeletIdStr } = use(params);
+  const codeletId = parseInt(codeletIdStr);
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -36,25 +36,25 @@ export default function GuestDuckletPage({
   const username = session?.user?.name ?? "Anonymous";
   const photoURL = session?.user?.image ?? undefined;
 
-  // Fetch ducklet data
+  // Fetch codelet data
   const {
-    data: ducklet,
-    isLoading: isDuckletLoading,
+    data: codelet,
+    isLoading: iscodeletLoading,
     error,
     refetch,
   } = useQuery(
-    trpc.ducklet.byId.queryOptions({ id: duckletId }, { enabled: !!duckletId }),
+    trpc.codelet.byId.queryOptions({ id: codeletId }, { enabled: !!codeletId }),
   );
 
-  // Authed guests on a public ducklet get a `viewer` collab token from
+  // Authed guests on a public codelet get a `viewer` collab token from
   // the API, which lets them open a read-only Hocuspocus connection. We
   // use that connection purely to observe `meta` Y.Map updates so we
   // can auto-redirect once the owner accepts the access request.
   const { data: collabAuth } = useQuery(
-    trpc.ducklet.getCollabToken.queryOptions(
-      { duckletId },
+    trpc.codelet.getCollabToken.queryOptions(
+      { codeletId },
       {
-        enabled: !!duckletId && !!userId && !!ducklet?.isPublic,
+        enabled: !!codeletId && !!userId && !!codelet?.isPublic,
         staleTime: 30 * 60 * 1000,
         // Owner cycling visibility / revoking access can flip this from
         // 200 to FORBIDDEN — don't loop on the error.
@@ -63,8 +63,8 @@ export default function GuestDuckletPage({
     ),
   );
 
-  const { ydoc } = useSocketDucklet({
-    duckletId: duckletIdStr,
+  const { ydoc } = useSocketcodelet({
+    codeletId: codeletIdStr,
     userId,
     username,
     photoURL,
@@ -76,16 +76,16 @@ export default function GuestDuckletPage({
     const meta = ydoc.getMap("meta");
     const onChange = () => {
       void queryClient.invalidateQueries(
-        trpc.ducklet.byId.queryFilter({ id: duckletId }),
+        trpc.codelet.byId.queryFilter({ id: codeletId }),
       );
     };
     meta.observe(onChange);
     return () => meta.unobserve(onChange);
-  }, [ydoc, queryClient, trpc, duckletId]);
+  }, [ydoc, queryClient, trpc, codeletId]);
 
   useEffect(() => {
-    track("ducklet-guest-view", { id: duckletId, signedIn: !!userId });
-  }, [duckletId, userId]);
+    track("codelet-guest-view", { id: codeletId, signedIn: !!userId });
+  }, [codeletId, userId]);
 
   // Local state for code (not synced)
   const [html, setHtml] = useState("");
@@ -94,13 +94,13 @@ export default function GuestDuckletPage({
   const [head, setHead] = useState("");
   const [body, setBody] = useState("");
 
-  // Initialize from ducklet's Y.js data
+  // Initialize from codelet's Y.js data
   useEffect(() => {
-    if (!ducklet?.yjsData) return;
+    if (!codelet?.yjsData) return;
 
     try {
       // Decode base64 Y.js data
-      const uint8Array = Uint8Array.from(atob(ducklet.yjsData), (c) =>
+      const uint8Array = Uint8Array.from(atob(codelet.yjsData), (c) =>
         c.charCodeAt(0),
       );
       const ydoc = new Y.Doc();
@@ -125,22 +125,22 @@ export default function GuestDuckletPage({
     } catch (err) {
       console.error("Failed to decode Y.js data:", err);
     }
-  }, [ducklet?.yjsData]);
+  }, [codelet?.yjsData]);
 
   // Determine user status
-  const isOwner = ducklet?.ownerId === userId;
-  const userStatus = ducklet?.currentUserStatus;
+  const isOwner = codelet?.ownerId === userId;
+  const userStatus = codelet?.currentUserStatus;
   const isMember = userStatus === "active";
 
   // Redirect if user has access
   useEffect(() => {
     if (isOwner || isMember) {
-      router.push(`/ducklets/${duckletId}`);
+      router.push(`/codelets/${codeletId}`);
     }
-  }, [isOwner, isMember, duckletId, router]);
+  }, [isOwner, isMember, codeletId, router]);
 
   const requestAccessMutation = useMutation(
-    trpc.ducklet.requestAccess.mutationOptions({
+    trpc.codelet.requestAccess.mutationOptions({
       onSuccess: () => {
         refetch();
       },
@@ -148,33 +148,33 @@ export default function GuestDuckletPage({
   );
 
   const respondInviteMutation = useMutation(
-    trpc.ducklet.respondToInvite.mutationOptions({
+    trpc.codelet.respondToInvite.mutationOptions({
       onSuccess: () => {
-        router.push(`/ducklets/${duckletId}`);
+        router.push(`/codelets/${codeletId}`);
       },
     }),
   );
 
-  if (isDuckletLoading) {
+  if (iscodeletLoading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-muted-foreground animate-pulse">
-          Loading ducklet...
+          Loading codelet...
         </div>
       </div>
     );
   }
 
-  if (error || !ducklet) {
+  if (error || !codelet) {
     return (
       <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
         <h2 className="text-destructive text-xl font-bold">
-          Error loading ducklet
+          Error loading codelet
         </h2>
         <p className="text-muted-foreground">
-          {error?.message ?? "Ducklet not found"}
+          {error?.message ?? "codelet not found"}
         </p>
-        <Button onClick={() => router.push("/ducklets")}>Back to List</Button>
+        <Button onClick={() => router.push("/codelets")}>Back to List</Button>
       </div>
     );
   }
@@ -183,7 +183,7 @@ export default function GuestDuckletPage({
     <div className="flex h-[100dvh] flex-col">
       <header className="bg-muted/20 flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-2">
-          <Link href="/ducklets">
+          <Link href="/codelets">
             <Button variant="outline" size="sm">
               <ChevronLeft className="h-4 w-4" />
               Back
@@ -191,8 +191,8 @@ export default function GuestDuckletPage({
           </Link>
         </div>
         <div>
-          <h1 className="font-semibold">{ducklet.name}</h1>
-          <p className="text-muted-foreground text-xs">{ducklet.description}</p>
+          <h1 className="font-semibold">{codelet.name}</h1>
+          <p className="text-muted-foreground text-xs">{codelet.description}</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Access Request UI */}
@@ -203,7 +203,7 @@ export default function GuestDuckletPage({
                 size="sm"
                 className="h-6 text-xs"
                 onClick={() =>
-                  respondInviteMutation.mutate({ duckletId, accept: true })
+                  respondInviteMutation.mutate({ codeletId, accept: true })
                 }
                 disabled={respondInviteMutation.isPending}
               >
@@ -220,11 +220,11 @@ export default function GuestDuckletPage({
                 size="sm"
                 variant="secondary"
                 onClick={() => {
-                  track("ducklet-guest-cta", {
-                    id: duckletId,
+                  track("codelet-guest-cta", {
+                    id: codeletId,
                     action: "request-access",
                   });
-                  requestAccessMutation.mutate({ duckletId });
+                  requestAccessMutation.mutate({ codeletId });
                 }}
                 disabled={requestAccessMutation.isPending}
               >
@@ -244,8 +244,8 @@ export default function GuestDuckletPage({
               variant="secondary"
               asChild
               onClick={() =>
-                track("ducklet-guest-cta", {
-                  id: duckletId,
+                track("codelet-guest-cta", {
+                  id: codeletId,
                   action: "signin",
                 })
               }
@@ -260,7 +260,7 @@ export default function GuestDuckletPage({
       <Alert className="m-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30">
         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
-          <strong>Guest Mode:</strong> You're viewing this public ducklet in
+          <strong>Guest Mode:</strong> You're viewing this public codelet in
           read-only mode. You can edit the code locally, but changes won't be
           saved or synced. Request access to collaborate with full edit
           permissions.

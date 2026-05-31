@@ -1,4 +1,4 @@
-# ducklets
+# codelets
 
 - collapsible console
 - store in db

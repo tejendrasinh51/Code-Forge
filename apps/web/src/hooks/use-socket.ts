@@ -7,8 +7,8 @@ import * as Y from "yjs";
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
 
-interface UseSocketDuckletOptions {
-  duckletId: string;
+interface UseSocketcodeletOptions {
+  codeletId: string;
   userId?: string;
   username: string;
   photoURL?: string;
@@ -50,19 +50,19 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-export function useSocketDucklet({
-  duckletId,
+export function useSocketcodelet({
+  codeletId,
   userId,
   username,
   photoURL,
   token,
-}: UseSocketDuckletOptions) {
+}: UseSocketcodeletOptions) {
   const [users, setUsers] = useState<UserPresence[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Y.Doc should be recreated if the duckletId changes to ensure clean state
-  const ydoc = useMemo(() => new Y.Doc(), [duckletId]);
+  // Y.Doc should be recreated if the codeletId changes to ensure clean state
+  const ydoc = useMemo(() => new Y.Doc(), [codeletId]);
 
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const userColor = useMemo(() => getRandomColor(), []);
@@ -74,7 +74,7 @@ export function useSocketDucklet({
 
     const newProvider = new HocuspocusProvider({
       url: wsUrl,
-      name: `ducklet-${duckletId}`,
+      name: `codelet-${codeletId}`,
       document: ydoc,
       token,
       onConnect: () => {
@@ -133,7 +133,7 @@ export function useSocketDucklet({
     return () => {
       newProvider.destroy();
     };
-  }, [duckletId, userId, username, photoURL, userColor, ydoc, token]);
+  }, [codeletId, userId, username, photoURL, userColor, ydoc, token]);
 
   const sendMessage = useCallback(
     (text: string) => {

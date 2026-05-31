@@ -28,7 +28,7 @@ import * as Y from "yjs";
 import type { RouterOutputs } from "@acme/api";
 
 import { authClient } from "~/auth/client";
-import { RenameDuckletDialog } from "~/components/collab-editor/rename-ducklet-dialog";
+import { RenamecodeletDialog } from "~/components/collab-editor/rename-codelet-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,7 +78,7 @@ import { useDebounce } from "~/hooks/use-debounce";
 import { track } from "~/lib/analytics";
 import { useTRPC } from "~/trpc/react";
 
-type DuckletSort = "recent" | "updated" | "oldest";
+type codeletSort = "recent" | "updated" | "oldest";
 
 const container = {
   hidden: { opacity: 0 },
@@ -95,7 +95,7 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
-type DuckletListItem = RouterOutputs["ducklet"]["list"]["items"][number];
+type codeletListItem = RouterOutputs["codelet"]["list"]["items"][number];
 
 // Browser-safe base64 encoding for binary data (Y.js updates).
 function uint8ArrayToBase64(bytes: Uint8Array): string {
@@ -108,26 +108,26 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export default function DuckletsPage() {
+export default function codeletsPage() {
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: session } = authClient.useSession();
   const currentUserId = session?.user?.id;
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newDuckletName, setNewDuckletName] = useState("");
+  const [newcodeletName, setNewcodeletName] = useState("");
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<DuckletSort>("recent");
+  const [sort, setSort] = useState<codeletSort>("recent");
   const debouncedSearch = useDebounce(search.trim(), 250);
 
   const {
-    data: ducklets,
+    data: codelets,
     isLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery(
-    trpc.ducklet.list.infiniteQueryOptions(
+    trpc.codelet.list.infiniteQueryOptions(
       {
         limit: 12,
         search: debouncedSearch || undefined,
@@ -140,26 +140,26 @@ export default function DuckletsPage() {
     ),
   );
 
-  const allDucklets = ducklets?.pages.flatMap((p) => p.items) ?? [];
+  const allcodelets = codelets?.pages.flatMap((p) => p.items) ?? [];
 
-  const createDuckletMutation = useMutation(
-    trpc.ducklet.create.mutationOptions({
-      onSuccess: (ducklet) => {
+  const createcodeletMutation = useMutation(
+    trpc.codelet.create.mutationOptions({
+      onSuccess: (codelet) => {
         setIsCreateOpen(false);
-        setNewDuckletName("");
+        setNewcodeletName("");
         void queryClient.invalidateQueries(
-          trpc.ducklet.list.infiniteQueryFilter(),
+          trpc.codelet.list.infiniteQueryFilter(),
         );
-        if (ducklet) {
-          track("ducklet-create", { id: ducklet.id });
-          void router.push(`/ducklets/${ducklet.id}`);
+        if (codelet) {
+          track("codelet-create", { id: codelet.id });
+          void router.push(`/codelets/${codelet.id}`);
         }
       },
     }),
   );
 
   const handleCreate = () => {
-    if (!newDuckletName.trim()) return;
+    if (!newcodeletName.trim()) return;
 
     const htmlContent = `
 <div class="container">
@@ -178,7 +178,7 @@ h1 {
 }
 `.trim();
 
-    const jsContent = `console.log('Hello from your new Ducklet!');`;
+    const jsContent = `console.log('Hello from your new codelet!');`;
 
     // Create YJS doc and populate it
     const doc = new Y.Doc();
@@ -189,33 +189,33 @@ h1 {
     // Encode state (browser-safe, no Node Buffer)
     const yjsData = uint8ArrayToBase64(Y.encodeStateAsUpdate(doc));
 
-    createDuckletMutation.mutate({
-      name: newDuckletName,
+    createcodeletMutation.mutate({
+      name: newcodeletName,
       isPublic: true,
       yjsData,
     });
   };
 
-  const deleteDuckletMutation = useMutation(
-    trpc.ducklet.delete.mutationOptions({
+  const deletecodeletMutation = useMutation(
+    trpc.codelet.delete.mutationOptions({
       onSuccess: () => {
         void queryClient.invalidateQueries(
-          trpc.ducklet.list.infiniteQueryFilter(),
+          trpc.codelet.list.infiniteQueryFilter(),
         );
       },
     }),
   );
 
-  const forkDuckletMutation = useMutation(
-    trpc.ducklet.fork.mutationOptions({
+  const forkcodeletMutation = useMutation(
+    trpc.codelet.fork.mutationOptions({
       onSuccess: (forked, variables) => {
         if (!forked) return;
-        track("ducklet-fork", { from: "list", sourceId: variables.id });
-        toast.success("Forked to your ducklets");
+        track("codelet-fork", { from: "list", sourceId: variables.id });
+        toast.success("Forked to your codelets");
         void queryClient.invalidateQueries(
-          trpc.ducklet.list.infiniteQueryFilter(),
+          trpc.codelet.list.infiniteQueryFilter(),
         );
-        void router.push(`/ducklets/${forked.id}`);
+        void router.push(`/codelets/${forked.id}`);
       },
       onError: (err) => toast.error(err.message),
     }),
@@ -226,7 +226,7 @@ h1 {
       <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-            Ducklets
+            codelets
           </h1>
           <p className="text-muted-foreground mt-3 text-lg">
             Collaborative coding rooms for pair programming and interviews.
@@ -240,12 +240,12 @@ h1 {
               className="shadow-lg transition-all hover:scale-[1.01]"
             >
               <Plus className="mr-2 h-5 w-5" />
-              New Ducklet
+              New codelet
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create a Ducklet</DialogTitle>
+              <DialogTitle>Create a codelet</DialogTitle>
               <DialogDescription>
                 Create a new room to start coding with others.
               </DialogDescription>
@@ -253,12 +253,12 @@ h1 {
             <div className="grid gap-6 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="name" className="text-left">
-                  Ducklet Name
+                  codelet Name
                 </Label>
                 <Input
                   id="name"
-                  value={newDuckletName}
-                  onChange={(e) => setNewDuckletName(e.target.value)}
+                  value={newcodeletName}
+                  onChange={(e) => setNewcodeletName(e.target.value)}
                   placeholder="e.g. Interview with John"
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                   className="col-span-3"
@@ -269,19 +269,19 @@ h1 {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateOpen(false)}
-                disabled={createDuckletMutation.isPending}
+                disabled={createcodeletMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={
-                  createDuckletMutation.isPending || !newDuckletName.trim()
+                  createcodeletMutation.isPending || !newcodeletName.trim()
                 }
               >
-                {createDuckletMutation.isPending
+                {createcodeletMutation.isPending
                   ? "Creating..."
-                  : "Create Ducklet"}
+                  : "Create codelet"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -293,7 +293,7 @@ h1 {
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             type="search"
-            placeholder="Search ducklets…"
+            placeholder="Search codelets…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -301,7 +301,7 @@ h1 {
         </div>
         <Select
           value={sort}
-          onValueChange={(val) => setSort(val as DuckletSort)}
+          onValueChange={(val) => setSort(val as codeletSort)}
         >
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue />
@@ -329,7 +329,7 @@ h1 {
             </Card>
           ))}
         </div>
-      ) : allDucklets.length === 0 ? (
+      ) : allcodelets.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -339,16 +339,16 @@ h1 {
             <Plus className="text-muted-foreground h-10 w-10" />
           </div>
           <h3 className="text-2xl font-semibold">
-            {debouncedSearch ? "No matches" : "No ducklets found"}
+            {debouncedSearch ? "No matches" : "No codelets found"}
           </h3>
           <p className="text-muted-foreground mt-2 mb-8 max-w-sm">
             {debouncedSearch
               ? `Nothing matches "${debouncedSearch}". Try a different name.`
-              : "You haven't created any Ducklets yet. Start your first collaborative coding session now!"}
+              : "You haven't created any codelets yet. Start your first collaborative coding session now!"}
           </p>
           {!debouncedSearch && (
             <Button size="lg" onClick={() => setIsCreateOpen(true)}>
-              Create Your First Ducklet
+              Create Your First codelet
             </Button>
           )}
         </motion.div>
@@ -360,23 +360,23 @@ h1 {
             animate="show"
             className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
           >
-            {allDucklets.map((ducklet) => (
-              <DuckletCard
-                key={ducklet.id}
-                ducklet={ducklet}
-                isOwner={ducklet.ownerId === currentUserId}
+            {allcodelets.map((codelet) => (
+              <codeletCard
+                key={codelet.id}
+                codelet={codelet}
+                isOwner={codelet.ownerId === currentUserId}
                 isSignedIn={!!currentUserId}
                 onDelete={() =>
-                  deleteDuckletMutation.mutate({ id: ducklet.id })
+                  deletecodeletMutation.mutate({ id: codelet.id })
                 }
                 isDeleting={
-                  deleteDuckletMutation.isPending &&
-                  deleteDuckletMutation.variables?.id === ducklet.id
+                  deletecodeletMutation.isPending &&
+                  deletecodeletMutation.variables?.id === codelet.id
                 }
-                onFork={() => forkDuckletMutation.mutate({ id: ducklet.id })}
+                onFork={() => forkcodeletMutation.mutate({ id: codelet.id })}
                 isForking={
-                  forkDuckletMutation.isPending &&
-                  forkDuckletMutation.variables?.id === ducklet.id
+                  forkcodeletMutation.isPending &&
+                  forkcodeletMutation.variables?.id === codelet.id
                 }
               />
             ))}
@@ -399,8 +399,8 @@ h1 {
   );
 }
 
-function DuckletCard({
-  ducklet,
+function codeletCard({
+  codelet,
   isOwner,
   isSignedIn,
   onDelete,
@@ -408,7 +408,7 @@ function DuckletCard({
   onFork,
   isForking,
 }: {
-  ducklet: DuckletListItem;
+  codelet: codeletListItem;
   isOwner: boolean;
   isSignedIn: boolean;
   onDelete: () => void;
@@ -423,13 +423,13 @@ function DuckletCard({
   return (
     <motion.div variants={item}>
       <Card className="group border-muted/40 hover:border-primary/40 flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-xl">
-        <Link href={`/ducklets/${ducklet.id}`} className="block">
+        <Link href={`/codelets/${codelet.id}`} className="block">
           <div className="relative aspect-[1200/630] w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-            {ducklet.previewImage ? (
+            {codelet.previewImage ? (
               <Image
-                src={ducklet.previewImage}
+                src={codelet.previewImage}
                 fill
-                alt={`Preview of ${ducklet.name}`}
+                alt={`Preview of ${codelet.name}`}
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.01]"
               />
             ) : (
@@ -440,15 +440,15 @@ function DuckletCard({
             <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/5" />
             <div className="absolute top-3 right-3 flex gap-2">
               <Badge
-                variant={ducklet.isPublic ? "secondary" : "outline"}
+                variant={codelet.isPublic ? "secondary" : "outline"}
                 className="bg-background/80 backdrop-blur-md"
               >
-                {ducklet.isPublic ? (
+                {codelet.isPublic ? (
                   <Globe className="mr-1 h-3 w-3" />
                 ) : (
                   <Lock className="mr-1 h-3 w-3" />
                 )}
-                {ducklet.isPublic ? "Public" : "Private"}
+                {codelet.isPublic ? "Public" : "Private"}
               </Badge>
             </div>
           </div>
@@ -459,23 +459,23 @@ function DuckletCard({
             <div className="space-y-1 overflow-hidden">
               <CardTitle className="truncate text-xl">
                 <Link
-                  href={`/ducklets/${ducklet.id}`}
+                  href={`/codelets/${codelet.id}`}
                   className="hover:text-primary transition-colors"
                 >
-                  {ducklet.name}
+                  {codelet.name}
                 </Link>
               </CardTitle>
               <div className="text-muted-foreground flex items-center gap-2 text-sm">
                 <Avatar className="h-5 w-5">
-                  <AvatarImage src={ducklet.owner?.photoURL ?? undefined} />
+                  <AvatarImage src={codelet.owner?.photoURL ?? undefined} />
                   <AvatarFallback className="text-[10px]">
-                    {ducklet.owner?.username?.charAt(0).toUpperCase() ?? "U"}
+                    {codelet.owner?.username?.charAt(0).toUpperCase() ?? "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="truncate">{ducklet.owner?.username}</span>
+                <span className="truncate">{codelet.owner?.username}</span>
                 <span>•</span>
                 <span className="flex items-center">
-                  {new Date(ducklet.createdAt).toLocaleDateString(undefined, {
+                  {new Date(codelet.createdAt).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                   })}
@@ -489,17 +489,17 @@ function DuckletCard({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  aria-label={`More actions for ${ducklet.name}`}
+                  aria-label={`More actions for ${codelet.name}`}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => router.push(`/ducklets/${ducklet.id}`)}
+                  onClick={() => router.push(`/codelets/${codelet.id}`)}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Ducklet
+                  Open codelet
                 </DropdownMenuItem>
                 {isSignedIn && (
                   <DropdownMenuItem
@@ -541,18 +541,18 @@ function DuckletCard({
 
             {isOwner && (
               <>
-                <RenameDuckletDialog
+                <RenamecodeletDialog
                   open={renameOpen}
                   onOpenChange={setRenameOpen}
-                  duckletId={ducklet.id}
-                  currentName={ducklet.name}
+                  codeletId={codelet.id}
+                  currentName={codelet.name}
                 />
                 <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete this ducklet?</AlertDialogTitle>
+                      <AlertDialogTitle>Delete this codelet?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        <strong>{ducklet.name}</strong> will be permanently
+                        <strong>{codelet.name}</strong> will be permanently
                         deleted along with its chat history and member access.
                         This cannot be undone.
                       </AlertDialogDescription>
@@ -586,7 +586,7 @@ function DuckletCard({
             className="group/btn w-full font-semibold"
             variant="default"
           >
-            <Link href={`/ducklets/${ducklet.id}`}>
+            <Link href={`/codelets/${codelet.id}`}>
               Join Session
               <ExternalLink className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
             </Link>
