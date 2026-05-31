@@ -2,7 +2,7 @@
   "name": "code-forge",
   "private": true,
   "engines": {
-    "node": "^23",
+    "node": "24.x",
     "pnpm": "^10.19.0"
   },
   "packageManager": "pnpm@10.19.0",
