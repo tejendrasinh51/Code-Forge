@@ -61,7 +61,7 @@ const FEATURES: Feature[] = [
 
 export function FeaturesSection() {
   return (
-    <section className="relative border-t border-white/5 bg-black py-28">
+    <section className="relative border-t border-white/5 bg-black py-20 md:py-28">
       {/* faint grid texture */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.06)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_40%,black,transparent)] [background-size:48px_48px]" />
 

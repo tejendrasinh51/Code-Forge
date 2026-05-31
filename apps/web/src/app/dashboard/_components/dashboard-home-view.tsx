@@ -112,7 +112,7 @@ export function DashboardHomeView() {
   return (
     <div className="space-y-8">
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="bg-muted rounded-lg p-2">
@@ -176,7 +176,7 @@ export function DashboardHomeView() {
               </Button>
             )}
           </div>
-          <div className="flex gap-0.5">
+          <div className="flex gap-0.5 overflow-x-auto pb-2">
             {miniHeatmap.map((week, wi) => (
               <div key={wi} className="flex flex-col gap-0.5">
                 {week.map((day, di) => (

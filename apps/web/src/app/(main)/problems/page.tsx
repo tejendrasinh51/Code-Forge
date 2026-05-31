@@ -117,8 +117,9 @@ export default function ProblemsPage() {
 
           {/* Problems Table */}
           <div className="bg-card overflow-hidden rounded-lg border">
-            <div className="text-muted-foreground bg-muted/30 grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 border-b px-4 py-3 text-sm font-medium">
-              <div className="flex w-8 justify-center">Status</div>
+            <div>
+              <div className="text-muted-foreground bg-muted/30 hidden sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] gap-4 border-b px-4 py-3 text-sm font-medium">
+                <div className="flex w-8 justify-center">Status</div>
               <div>Title</div>
               <div className="w-24 text-center">Difficulty</div>
               <div className="w-20 text-center">Solved</div>
@@ -138,68 +139,78 @@ export default function ProblemsPage() {
                 {data?.items.map((problem, index) => (
                   <div
                     key={problem.id}
-                    className="hover:bg-muted/50 group grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-4 px-4 py-3 transition-colors"
+                    className="hover:bg-muted/50 group flex flex-col sm:grid sm:grid-cols-[auto_1fr_auto_auto_auto] sm:items-center gap-2 sm:gap-4 px-4 py-3 sm:py-3 transition-colors"
                   >
-                    <div className="flex w-8 justify-center">
-                      {problem.userStatus === "solved" ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : problem.userStatus === "attempted" ? (
-                        <Circle className="h-5 w-5 text-amber-500" />
-                      ) : (
-                        <Circle className="text-muted-foreground/30 group-hover:text-muted-foreground/50 h-5 w-5 transition-colors" />
-                      )}
-                    </div>
-                    <Link
-                      href={`/problems/${problem.slug}`}
-                      className="font-medium"
-                    >
-                      <span className="text-muted-foreground/50 mr-3 font-mono text-sm">
-                        {index + 1}.
-                      </span>
-                      {problem.title}
-                      {problem.tags && problem.tags.length > 0 && (
-                        <div className="ml-3 inline-flex gap-1">
-                          {problem.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 text-[10px]"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </Link>
-                    <div className="w-24 text-center">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "font-normal capitalize",
-                          DIFFICULTY_COLORS[problem.difficulty],
+                    <div className="flex items-center gap-3 sm:contents">
+                      <div className="flex sm:w-8 sm:justify-center">
+                        {problem.userStatus === "solved" ? (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : problem.userStatus === "attempted" ? (
+                          <Circle className="h-5 w-5 text-amber-500" />
+                        ) : (
+                          <Circle className="text-muted-foreground/30 group-hover:text-muted-foreground/50 h-5 w-5 transition-colors" />
                         )}
+                      </div>
+                      <Link
+                        href={`/problems/${problem.slug}`}
+                        className="font-medium flex-1 sm:flex-none"
                       >
-                        {problem.difficulty}
-                      </Badge>
+                        <span className="text-muted-foreground/50 mr-2 sm:mr-3 font-mono text-sm">
+                          {index + 1}.
+                        </span>
+                        {problem.title}
+                        {problem.tags && problem.tags.length > 0 && (
+                          <div className="mt-1 sm:mt-0 sm:ml-3 sm:inline-flex flex flex-wrap gap-1">
+                            {problem.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 text-[10px]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </Link>
+                      <div className="flex sm:hidden">
+                        <BookmarkButton problemId={problem.id} />
+                      </div>
                     </div>
-                    <div className="text-muted-foreground w-20 text-center text-sm">
-                      {problem.acceptanceRate != null
-                        ? `${problem.acceptanceRate}%`
-                        : "-"}
-                    </div>
-                    <div className="flex w-10 justify-center">
-                      <BookmarkButton problemId={problem.id} />
+                    
+                    <div className="flex items-center gap-3 pl-8 sm:pl-0 sm:contents mt-1 sm:mt-0">
+                      <div className="sm:w-24 sm:text-center text-xs">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "font-normal capitalize",
+                            DIFFICULTY_COLORS[problem.difficulty],
+                          )}
+                        >
+                          {problem.difficulty}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground sm:w-20 sm:text-center text-xs">
+                        {problem.acceptanceRate != null
+                          ? `${problem.acceptanceRate}%`
+                          : "-"}
+                      </div>
+                      <div className="hidden sm:flex sm:w-10 sm:justify-center">
+                        <BookmarkButton problemId={problem.id} />
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+            </div>
           </div>
         </>
       ) : (
         /* Bookmarks Tab */
         <div className="bg-card overflow-hidden rounded-lg border">
-          <div className="text-muted-foreground bg-muted/30 grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b px-4 py-3 text-sm font-medium">
-            <div>Title</div>
+          <div>
+            <div className="text-muted-foreground bg-muted/30 hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 border-b px-4 py-3 text-sm font-medium">
+              <div>Title</div>
             <div className="w-24 text-center">Difficulty</div>
             <div className="w-32 text-center">Saved</div>
             <div className="w-10"></div>
@@ -222,50 +233,62 @@ export default function ProblemsPage() {
               {bookmarks.map((bm) => (
                 <div
                   key={bm.id}
-                  className="hover:bg-muted/50 grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 transition-colors"
+                  className="hover:bg-muted/50 flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:items-center gap-2 sm:gap-4 px-4 py-3 transition-colors"
                 >
-                  <Link
-                    href={`/problems/${bm.problemSlug}`}
-                    className="font-medium hover:underline"
-                  >
-                    {bm.problemTitle}
-                    {bm.problemTags && bm.problemTags.length > 0 && (
-                      <span className="ml-3 inline-flex gap-1">
-                        {bm.problemTags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 text-[10px]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </Link>
-                  <div className="w-24 text-center">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "font-normal capitalize",
-                        DIFFICULTY_COLORS[bm.problemDifficulty],
-                      )}
+                  <div className="flex items-center justify-between sm:contents">
+                    <Link
+                      href={`/problems/${bm.problemSlug}`}
+                      className="font-medium hover:underline flex-1 sm:flex-none"
                     >
-                      {bm.problemDifficulty}
-                    </Badge>
+                      {bm.problemTitle}
+                      {bm.problemTags && bm.problemTags.length > 0 && (
+                        <span className="mt-1 sm:mt-0 sm:ml-3 sm:inline-flex flex flex-wrap gap-1">
+                          {bm.problemTags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 text-[10px]"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </Link>
+                    <div className="flex sm:hidden">
+                      <BookmarkButton
+                        problemId={bm.problemId}
+                        initialBookmarked
+                      />
+                    </div>
                   </div>
-                  <div className="text-muted-foreground w-32 text-center text-sm">
-                    {new Date(bm.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="flex w-10 justify-center">
-                    <BookmarkButton
-                      problemId={bm.problemId}
-                      initialBookmarked
-                    />
+                  
+                  <div className="flex items-center gap-3 sm:contents mt-1 sm:mt-0">
+                    <div className="sm:w-24 sm:text-center text-xs">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-normal capitalize",
+                          DIFFICULTY_COLORS[bm.problemDifficulty],
+                        )}
+                      >
+                        {bm.problemDifficulty}
+                      </Badge>
+                    </div>
+                    <div className="text-muted-foreground sm:w-32 sm:text-center text-xs">
+                      {new Date(bm.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="hidden sm:flex w-10 justify-center">
+                      <BookmarkButton
+                        problemId={bm.problemId}
+                        initialBookmarked
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+          </div>
         </div>
       )}
     </div>

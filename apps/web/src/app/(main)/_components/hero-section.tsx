@@ -54,14 +54,14 @@ export function HeroSection() {
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
 
-            <h1 className="text-6xl leading-[0.9] font-black tracking-tight text-white md:text-7xl xl:text-8xl">
+            <h1 className="text-5xl leading-[0.9] font-black tracking-tight text-white sm:text-6xl md:text-7xl xl:text-8xl">
               BUILD. BATTLE.
               <br />
               <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
                 BELONG.
               </span>
             </h1>
-            <p className="mt-6 max-w-md text-base text-neutral-400 md:text-lg">
+            <p className="mt-6 max-w-md text-sm text-neutral-400 sm:text-base md:text-lg">
               Problems, UI battles, and real-time collaboration — all in one
               place.
             </p>
