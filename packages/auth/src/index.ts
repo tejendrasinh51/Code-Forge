@@ -140,7 +140,7 @@ export function initAuth<
     },
     trustedOrigins: [
       "http://localhost:3001",
-      "https://dev3001.codeforge.xyz",
+      "https://dev3001.codeforgeweb.vercel.app",
     ],
   } satisfies BetterAuthOptions;
 

@@ -6,7 +6,7 @@ export const env = createEnv({
     JUDGE_API_URL: z
       .string()
       .url()
-      .default("https://judge.codeforge.xyz/api/v1"),
+      .default("https://judge.codeforgeweb.vercel.app/api/v1"),
     JUDGE_API_TOKEN:
       process.env.NODE_ENV === "production"
         ? z.string().min(1)

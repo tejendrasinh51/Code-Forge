@@ -26,7 +26,7 @@ const config = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "cdn.codeforge.xyz",
+        hostname: "cdn.codeforgeweb.vercel.app",
         port: "",
         pathname: "/**",
       },

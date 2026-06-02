@@ -11,6 +11,11 @@
 
 **A full-stack competitive programming platform** — LeetCode-style judging, real-time collaborative coding, system design challenges, and an in-browser playground. All in one monorepo.
 
+[![Portfolio](https://img.shields.io/badge/Portfolio-tejendrasinh.vercel.app-blue?style=flat-square&logo=vercel)](https://tejendrasinh.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-tejendrasinh51-black?style=flat-square&logo=github)](https://github.com/tejendrasinh51)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Tejendrasinh_Sisodia-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/tejendrasinh-sisodia-243a5a293/)
+[![Email](https://img.shields.io/badge/Email-tejendrasinh51@gmail.com-red?style=flat-square&logo=gmail)](mailto:tejendrasinh51@gmail.com)
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-97%25-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![tRPC](https://img.shields.io/badge/tRPC-v11-398CCB?style=flat-square)](https://trpc.io/)

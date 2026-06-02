@@ -61,5 +61,5 @@ export const uploadFile = async (
 };
 
 export const getPublicUrl = (key: string) => {
-  return `https://cdn.codeforge.xyz/${key}`;
+  return `https://cdn.codeforgeweb.vercel.app/${key}`;
 };

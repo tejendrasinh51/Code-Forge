@@ -1,5 +1,18 @@
 {
   "name": "code-forge",
+  "version": "1.0.0",
+  "description": "A full-stack competitive programming platform — LeetCode-style judging, real-time collaborative coding, system design challenges, and an in-browser playground.",
+  "author": "Tejendrasinh Sisodia <tejendrasinh51@gmail.com>",
+  "homepage": "https://tejendrasinh.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tejendrasinh51/Code-Forge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tejendrasinh51/Code-Forge/issues",
+    "email": "tejendrasinh51@gmail.com"
+  },
+  "keywords": ["competitive-programming", "codelets", "realtime-collaboration", "system-design"],
   "private": true,
   "engines": {
     "node": "24.x",
